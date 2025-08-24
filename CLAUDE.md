@@ -1,4 +1,5 @@
-IMPORTANT ALWAYS ASK FOR PERMISSION WHEN MAKING COMMITS
+NEVER make git commits without explicit user permission. Always ask 'Would you like me to commit these changes?' and wait
+  for a 'yes' or similar confirmation before running git commit. The user saying 'make commit' IS permission. It IS NOT permission for the rest of the session.
 
 # TESTING
 - Code Coverage should always be >= 85%

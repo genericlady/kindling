@@ -52,12 +52,23 @@ end
 desc "Run all linters"
 task lint: [:rubocop, :standard]
 
+# Lint fix task (auto-fix issues)
+namespace :lint do
+  desc "Auto-fix linting issues"
+  task :fix do
+    puts "Auto-fixing with RuboCop..."
+    sh "bundle exec rubocop -A"
+    puts "\nAuto-fixing with StandardRB..."
+    sh "bundle exec standardrb --fix"
+  end
+end
+
 # Console task for debugging
 desc "Open an interactive console"
 task :console do
   require "irb"
   require_relative "lib/kindling"
-  
+
   ARGV.clear
   IRB.start
 end
@@ -80,7 +91,7 @@ task :clean do
   FileUtils.rm_rf("coverage")
   FileUtils.rm_rf("tmp")
   FileUtils.rm_f(".DS_Store")
-  
+
   # Remove any .DS_Store files recursively
   Dir.glob("**/.DS_Store").each { |f| FileUtils.rm_f(f) }
 end
@@ -97,9 +108,9 @@ end
 desc "Run performance benchmarks"
 task :bench do
   require_relative "lib/kindling"
-  
+
   puts "Running fuzzy search benchmark..."
-  
+
   # Generate test data
   paths = []
   100.times do |i|
@@ -107,26 +118,26 @@ task :bench do
       paths << "dir#{i}/subdir#{j}/file#{i}_#{j}.rb"
     end
   end
-  
+
   puts "Testing with #{paths.size} paths"
-  
+
   # Test queries
   queries = ["dir5", "file42", "sub99fi", "dir1sub2file"]
-  
+
   queries.each do |query|
     start = Time.now
     results = Kindling::Fuzzy.filter(paths, query, limit: 100)
     elapsed = ((Time.now - start) * 1000).round(2)
-    
+
     puts "Query '#{query}': #{results.size} results in #{elapsed}ms"
   end
-  
+
   # Test tree rendering
   selected = paths.sample(50)
   start = Time.now
   tree = Kindling::TreeRenderer.render(selected)
   elapsed = ((Time.now - start) * 1000).round(2)
-  
+
   puts "\nTree rendering (#{selected.size} paths): #{elapsed}ms"
   puts "Tree has #{tree.lines.count} lines"
 end

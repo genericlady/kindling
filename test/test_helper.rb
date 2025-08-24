@@ -27,13 +27,13 @@ module TestHelpers
       yield dir
     end
   end
-  
+
   # Create a file tree structure from a hash
   # Example: create_files(dir, { "src" => { "main.rb" => "", "test.rb" => "" } })
   def create_files(root, structure)
     structure.each do |name, content|
       path = File.join(root, name)
-      
+
       if content.is_a?(Hash)
         # Directory with nested structure
         FileUtils.mkdir_p(path)
@@ -45,7 +45,7 @@ module TestHelpers
       end
     end
   end
-  
+
   # Assert arrays are equal ignoring order
   def assert_same_elements(expected, actual, message = nil)
     assert_equal expected.sort, actual.sort, message

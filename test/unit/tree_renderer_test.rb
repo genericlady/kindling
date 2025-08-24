@@ -6,16 +6,16 @@ class TreeRendererTest < Minitest::Test
   def test_empty_paths_returns_empty_string
     assert_equal "", Kindling::TreeRenderer.render([])
   end
-  
+
   def test_single_file
     paths = ["README.md"]
     expected = <<~TREE.chomp
       └── README.md
     TREE
-    
+
     assert_equal expected, Kindling::TreeRenderer.render(paths)
   end
-  
+
   def test_multiple_files_in_root
     paths = ["README.md", "Gemfile", "Rakefile"]
     expected = <<~TREE.chomp
@@ -23,17 +23,17 @@ class TreeRendererTest < Minitest::Test
       ├── README.md
       └── Rakefile
     TREE
-    
+
     assert_equal expected, Kindling::TreeRenderer.render(paths)
   end
-  
+
   def test_nested_directories
     paths = [
       "app/models/user.rb",
       "app/models/post.rb",
       "app/controllers/users_controller.rb"
     ]
-    
+
     expected = <<~TREE.chomp
       app/
       └── app/
@@ -43,10 +43,10 @@ class TreeRendererTest < Minitest::Test
               ├── post.rb
               └── user.rb
     TREE
-    
+
     assert_equal expected, Kindling::TreeRenderer.render(paths, root_name: "app")
   end
-  
+
   def test_mixed_files_and_directories
     paths = [
       "README.md",
@@ -54,7 +54,7 @@ class TreeRendererTest < Minitest::Test
       "src/lib/helper.rb",
       "test/test_helper.rb"
     ]
-    
+
     expected = <<~TREE.chomp
       ├── src/
       │   ├── lib/
@@ -64,15 +64,15 @@ class TreeRendererTest < Minitest::Test
       │   └── test_helper.rb
       └── README.md
     TREE
-    
+
     assert_equal expected, Kindling::TreeRenderer.render(paths)
   end
-  
+
   def test_deep_nesting
     paths = [
       "a/b/c/d/e/file.txt"
     ]
-    
+
     expected = <<~TREE.chomp
       a/
       └── a/
@@ -82,17 +82,17 @@ class TreeRendererTest < Minitest::Test
                       └── e/
                           └── file.txt
     TREE
-    
+
     assert_equal expected, Kindling::TreeRenderer.render(paths, root_name: "a")
   end
-  
+
   def test_sorts_directories_before_files
     paths = [
       "src/file2.rb",
       "src/dir/nested.rb",
       "src/file1.rb"
     ]
-    
+
     expected = <<~TREE.chomp
       src/
       └── src/
@@ -101,10 +101,10 @@ class TreeRendererTest < Minitest::Test
           ├── file1.rb
           └── file2.rb
     TREE
-    
+
     assert_equal expected, Kindling::TreeRenderer.render(paths, root_name: "src")
   end
-  
+
   def test_alphabetical_sorting_within_type
     paths = [
       "zebra.txt",
@@ -112,7 +112,7 @@ class TreeRendererTest < Minitest::Test
       "banana/file.txt",
       "cherry/file.txt"
     ]
-    
+
     expected = <<~TREE.chomp
       ├── banana/
       │   └── file.txt
@@ -121,27 +121,27 @@ class TreeRendererTest < Minitest::Test
       ├── apple.txt
       └── zebra.txt
     TREE
-    
+
     assert_equal expected, Kindling::TreeRenderer.render(paths)
   end
-  
+
   def test_unicode_filenames
     paths = [
       "café/menü.txt",
       "über.rb",
       "naïve.txt"
     ]
-    
+
     expected = <<~TREE.chomp
       ├── café/
       │   └── menü.txt
       ├── naïve.txt
       └── über.rb
     TREE
-    
+
     assert_equal expected, Kindling::TreeRenderer.render(paths)
   end
-  
+
   def test_with_custom_root_name
     paths = ["src/main.rb"]
     expected = <<~TREE.chomp
@@ -149,10 +149,10 @@ class TreeRendererTest < Minitest::Test
       └── src/
           └── main.rb
     TREE
-    
+
     assert_equal expected, Kindling::TreeRenderer.render(paths, root_name: "my-project")
   end
-  
+
   def test_complex_tree_structure
     paths = [
       "README.md",
@@ -167,7 +167,7 @@ class TreeRendererTest < Minitest::Test
       "docs/README.md",
       "docs/api/endpoints.md"
     ]
-    
+
     expected = <<~TREE.chomp
       project/
       ├── docs/
@@ -190,7 +190,7 @@ class TreeRendererTest < Minitest::Test
       ├── LICENSE
       └── README.md
     TREE
-    
+
     assert_equal expected, Kindling::TreeRenderer.render(paths, root_name: "project")
   end
 end
