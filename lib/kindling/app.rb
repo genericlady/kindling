@@ -51,6 +51,10 @@ module Kindling
       @indexer = Indexer.new
       @current_root = root_path
       
+      # Clear previous selections when opening a new folder
+      @window.clear_file_selections
+      @selected_paths.clear
+      
       # Show initial progress
       @window.show_progress_spinner
       @window.update_progress("Scanning #{File.basename(root_path)}...")

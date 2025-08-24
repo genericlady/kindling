@@ -51,6 +51,10 @@ module Kindling
         @file_list.update(paths)
       end
       
+      def clear_file_selections
+        @file_list.clear_selection
+      end
+      
       def update_preview(content)
         @preview.update(content)
       end

@@ -30,25 +30,19 @@ module Kindling
         # Detach model for performance
         @tree_view.model = nil
         
-        # Clear store but preserve selections for paths that still exist
-        old_selections = @selected_set.dup
+        # Clear the store but NOT the selection set
+        # We want to preserve ALL selections, not just visible ones
         @store.clear
-        @selected_set.clear
         
         # Batch add paths (cap for UI performance)
         display_paths = paths.first(Config::MAX_VISIBLE_RESULTS)
         
         display_paths.each do |path|
           iter = @store.append
-          # Check if this path was previously selected
-          was_selected = old_selections.include?(path)
-          iter[0] = was_selected  # Checkbox state
-          iter[1] = path          # File path
-          
-          # Restore selection state
-          if was_selected
-            @selected_set.add(path)
-          end
+          # Check if this path is in our persistent selection set
+          is_selected = @selected_set.include?(path)
+          iter[0] = is_selected  # Checkbox state
+          iter[1] = path         # File path
         end
         
         # Reattach model
@@ -59,10 +53,7 @@ module Kindling
           Logging.debug("Showing #{display_paths.size} of #{paths.size} results")
         end
         
-        # Notify if selections changed due to filtering
-        if @selected_set != old_selections
-          @callbacks[:selection_changed]&.call(@selected_set.to_a.sort)
-        end
+        # No need to notify about selection changes - selections are preserved
       end
       
       # Get selected paths
