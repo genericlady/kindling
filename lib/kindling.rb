@@ -16,6 +16,7 @@ module Kindling
   # Load all components
   require_relative "kindling/logging"
   require_relative "kindling/config"
+  require_relative "kindling/gitignore_parser"
   require_relative "kindling/indexer"
   require_relative "kindling/fuzzy"
   require_relative "kindling/selection"

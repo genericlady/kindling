@@ -12,6 +12,10 @@ module Kindling
     DEBOUNCE_MS = 200
     PROGRESS_UPDATE_INTERVAL = 200 # files
     
+    # Directory limits - skip directories that exceed these
+    MAX_DIR_SIZE_MB = 100 # Skip directories larger than this
+    MAX_DIR_FILE_COUNT = 10_000 # Skip directories with more files than this
+    
     # Memory limits
     MAX_MEMORY_MB = 250
     
