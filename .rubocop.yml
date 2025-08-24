@@ -1,0 +1,75 @@
+require:
+  - standard
+
+inherit_gem:
+  standard: config/base.yml
+
+AllCops:
+  TargetRubyVersion: 3.2
+  NewCops: enable
+  Exclude:
+    - 'vendor/**/*'
+    - 'coverage/**/*'
+    - 'tmp/**/*'
+    - 'bin/*'
+
+# Style preferences for this project
+Style/StringLiterals:
+  Enabled: true
+  EnforcedStyle: double_quotes
+
+Style/Documentation:
+  Enabled: false
+
+Style/FrozenStringLiteralComment:
+  Enabled: true
+
+# Allow longer lines in tests
+Layout/LineLength:
+  Max: 120
+  Exclude:
+    - 'test/**/*'
+
+# Allow larger classes for UI components
+Metrics/ClassLength:
+  Max: 150
+  Exclude:
+    - 'lib/kindling/app.rb'
+    - 'lib/kindling/ui/*.rb'
+
+# Allow larger methods in UI setup
+Metrics/MethodLength:
+  Max: 30
+  Exclude:
+    - 'lib/kindling/ui/*.rb'
+    - 'test/**/*'
+
+# Allow more complex methods in fuzzy search
+Metrics/CyclomaticComplexity:
+  Max: 10
+  Exclude:
+    - 'lib/kindling/fuzzy.rb'
+
+Metrics/AbcSize:
+  Max: 30
+  Exclude:
+    - 'lib/kindling/ui/*.rb'
+    - 'lib/kindling/fuzzy.rb'
+
+# Allow block length in tests and Rake tasks
+Metrics/BlockLength:
+  Exclude:
+    - 'test/**/*'
+    - 'Rakefile'
+    - '**/*.rake'
+
+# Testing specific
+Minitest/MultipleAssertions:
+  Max: 10
+
+# Allow TODO comments during development
+Style/InlineComment:
+  Enabled: false
+
+Style/CommentAnnotation:
+  Enabled: false

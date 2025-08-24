@@ -1,5 +1,10 @@
 # Kindling 🔥
 
+[![CI](https://github.com/yourusername/kindling/actions/workflows/ci.yml/badge.svg)](https://github.com/yourusername/kindling/actions/workflows/ci.yml)
+[![Ruby](https://img.shields.io/badge/Ruby-3.2%2B-red)](https://www.ruby-lang.org)
+[![GTK](https://img.shields.io/badge/GTK-3.0-blue)](https://www.gtk.org)
+[![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
+
 **Kindling** is a lightweight desktop tool written in **Ruby + GTK3** that helps you gather and shape context when working with AI.  
 
 Instead of manually hunting for files and pasting snippets, Kindling lets you:  
