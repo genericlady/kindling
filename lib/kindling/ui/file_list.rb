@@ -30,15 +30,25 @@ module Kindling
         # Detach model for performance
         @tree_view.model = nil
         
-        # Clear and refill
+        # Clear store but preserve selections for paths that still exist
+        old_selections = @selected_set.dup
         @store.clear
+        @selected_set.clear
         
         # Batch add paths (cap for UI performance)
         display_paths = paths.first(Config::MAX_VISIBLE_RESULTS)
         
         display_paths.each do |path|
           iter = @store.append
-          iter[0] = path
+          # Check if this path was previously selected
+          was_selected = old_selections.include?(path)
+          iter[0] = was_selected  # Checkbox state
+          iter[1] = path          # File path
+          
+          # Restore selection state
+          if was_selected
+            @selected_set.add(path)
+          end
         end
         
         # Reattach model
@@ -48,44 +58,80 @@ module Kindling
         if paths.size > display_paths.size
           Logging.debug("Showing #{display_paths.size} of #{paths.size} results")
         end
+        
+        # Notify if selections changed due to filtering
+        if @selected_set != old_selections
+          @callbacks[:selection_changed]&.call(@selected_set.to_a.sort)
+        end
       end
       
       # Get selected paths
       def selected_paths
-        paths = []
-        selection = @tree_view.selection
-        
-        selection.each do |_model, _path, iter|
-          paths << iter[0]
+        @selected_set.to_a.sort
+      end
+      
+      # Select all visible items
+      def select_all
+        @store.each do |_model, _path, iter|
+          iter[0] = true
+          @selected_set.add(iter[1])
         end
-        
-        paths
+        @callbacks[:selection_changed]&.call(@selected_set.to_a.sort)
+      end
+      
+      # Clear all selections
+      def clear_selection
+        @store.each do |_model, _path, iter|
+          iter[0] = false
+        end
+        @selected_set.clear
+        @callbacks[:selection_changed]&.call([])
       end
       
       private
       
       def setup_tree_view
-        # Create list store with single string column
-        @store = Gtk::ListStore.new(String)
+        # Create list store with checkbox state (Boolean) and path (String)
+        @store = Gtk::ListStore.new(TrueClass, String)
+        @selected_set = Set.new
         
         # Create tree view
         @tree_view = Gtk::TreeView.new(@store)
         @tree_view.headers_visible = false
         
-        # Enable multi-select
-        @tree_view.selection.mode = :multiple
+        # Disable GTK selection - we'll use checkboxes instead
+        @tree_view.selection.mode = :none
         
-        # Add single column for file path
-        renderer = Gtk::CellRendererText.new
-        renderer.ellipsize = :middle # Handle long paths
-        
-        column = Gtk::TreeViewColumn.new("Path", renderer, text: 0)
-        @tree_view.append_column(column)
-        
-        # Handle selection changes
-        @tree_view.selection.signal_connect("changed") do
-          @callbacks[:selection_changed]&.call(selected_paths)
+        # Add checkbox column
+        checkbox_renderer = Gtk::CellRendererToggle.new
+        checkbox_renderer.signal_connect("toggled") do |_renderer, path|
+          iter = @store.get_iter(path)
+          if iter
+            # Toggle the checkbox
+            iter[0] = !iter[0]
+            
+            # Update our selection tracking
+            file_path = iter[1]
+            if iter[0]
+              @selected_set.add(file_path)
+            else
+              @selected_set.delete(file_path)
+            end
+            
+            # Notify listeners
+            @callbacks[:selection_changed]&.call(@selected_set.to_a.sort)
+          end
         end
+        
+        checkbox_column = Gtk::TreeViewColumn.new("", checkbox_renderer, active: 0)
+        @tree_view.append_column(checkbox_column)
+        
+        # Add file path column
+        text_renderer = Gtk::CellRendererText.new
+        text_renderer.ellipsize = :middle # Handle long paths
+        
+        path_column = Gtk::TreeViewColumn.new("Path", text_renderer, text: 1)
+        @tree_view.append_column(path_column)
         
         # Add to scrolled window
         add(@tree_view)
