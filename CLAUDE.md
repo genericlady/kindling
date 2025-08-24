@@ -1,4 +1,5 @@
 # TESTING
+- Code Coverage should always be >= 85%
 - to run tests
 ```
 rake test
