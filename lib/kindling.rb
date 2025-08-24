@@ -4,15 +4,14 @@ require "gtk3"
 require "gio2"
 require "find"
 require "pathname"
-require "set"
 require "fileutils"
 
 # Main module for Kindling file tree clipboard tool
 module Kindling
   VERSION = File.read(File.expand_path("../../VERSION", __FILE__)).strip
-  
+
   class Error < StandardError; end
-  
+
   # Load all components
   require_relative "kindling/logging"
   require_relative "kindling/config"
@@ -23,7 +22,7 @@ module Kindling
   require_relative "kindling/tree_renderer"
   require_relative "kindling/clipboard"
   require_relative "kindling/app"
-  
+
   # UI components
   require_relative "kindling/ui/window"
   require_relative "kindling/ui/header"
