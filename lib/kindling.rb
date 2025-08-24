@@ -9,7 +9,7 @@ require "fileutils"
 
 # Main module for Kindling file tree clipboard tool
 module Kindling
-  VERSION = "0.1.0"
+  VERSION = File.read(File.expand_path("../../VERSION", __FILE__)).strip
   
   class Error < StandardError; end
   
