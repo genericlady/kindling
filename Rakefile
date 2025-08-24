@@ -52,6 +52,17 @@ end
 desc "Run all linters"
 task lint: [:rubocop, :standard]
 
+# Lint fix task (auto-fix issues)
+namespace :lint do
+  desc "Auto-fix linting issues"
+  task :fix do
+    puts "Auto-fixing with RuboCop..."
+    sh "bundle exec rubocop -A"
+    puts "\nAuto-fixing with StandardRB..."
+    sh "bundle exec standardrb --fix"
+  end
+end
+
 # Console task for debugging
 desc "Open an interactive console"
 task :console do

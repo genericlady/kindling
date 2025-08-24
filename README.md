@@ -172,7 +172,11 @@ rake coverage
 ### Code Style
 We use both RuboCop and Standard for linting:
 ```bash
+# Check for style issues
 rake lint
+
+# Auto-fix style issues
+rake lint:fix
 ```
 
 ---
