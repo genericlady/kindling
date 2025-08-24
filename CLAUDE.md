@@ -7,6 +7,9 @@ IMPORTANT ALWAYS ASK FOR PERMISSION WHEN MAKING COMMITS
 rake test
 ```
 
+# Github Actions
+- use `act` to run and debug actions locally
+
 # DOCUMENTATION
 - Keep README.md in project root up to date
 
