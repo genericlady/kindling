@@ -1,8 +1,14 @@
+IMPORTANT ALWAYS ASK FOR PERMISSION WHEN MAKING COMMITS
+
 # TESTING
+- Code Coverage should always be >= 85%
 - to run tests
 ```
 rake test
 ```
+
+# Github Actions
+- use `act` to run and debug actions locally
 
 # DOCUMENTATION
 - Keep README.md in project root up to date

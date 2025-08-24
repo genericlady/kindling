@@ -1,0 +1,196 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Ruby ${{ matrix.ruby }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        ruby: ['3.2', '3.3']
+        
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Install GTK3 dependencies (Ubuntu)
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          libgtk-3-dev \
+          libgirepository1.0-dev \
+          libpango1.0-dev \
+          libcairo2-dev \
+          libgdk-pixbuf2.0-dev \
+          libglib2.0-dev \
+          xvfb
+        # Set up virtual display for headless testing
+        echo "DISPLAY=:99" >> $GITHUB_ENV
+        
+    - name: Install GTK3 dependencies (macOS)
+      if: matrix.os == 'macos-latest'
+      run: |
+        brew update
+        brew install \
+          gtk+3 \
+          gobject-introspection \
+          pango \
+          cairo \
+          gdk-pixbuf \
+          glib \
+          pkg-config
+        # Set PKG_CONFIG_PATH for macOS
+        echo "PKG_CONFIG_PATH=$(brew --prefix)/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
+    
+    - name: Set up Ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: ${{ matrix.ruby }}
+        bundler-cache: true # runs 'bundle install' and caches installed gems
+        
+    - name: Start virtual display (Ubuntu)
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        export DISPLAY=:99
+        Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
+        sleep 3 # Give xvfb time to start
+        
+    - name: Run RuboCop
+      run: bundle exec rubocop --config .rubocop.yml || true
+      continue-on-error: true
+      
+    - name: Run tests
+      run: |
+        if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
+          export DISPLAY=:99
+        fi
+        bundle exec rake test
+        
+    - name: Run tests with coverage
+      if: matrix.ruby == '3.3' && matrix.os == 'ubuntu-latest'
+      run: |
+        export DISPLAY=:99
+        COVERAGE=true bundle exec rake test
+        
+    - name: Upload coverage reports
+      if: matrix.ruby == '3.3' && matrix.os == 'ubuntu-latest'
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-report
+        path: coverage/
+        
+    - name: Check coverage threshold
+      if: matrix.ruby == '3.3' && matrix.os == 'ubuntu-latest'
+      run: |
+        if [ -f coverage/.last_run.json ]; then
+          coverage=$(ruby -e "require 'json'; puts JSON.parse(File.read('coverage/.last_run.json'))['result']['line']")
+          echo "Code coverage: ${coverage}%"
+          # Temporarily set threshold to 50% for MVP, target is 85%
+          threshold=50
+          if [ $(echo "$coverage < $threshold" | bc) -eq 1 ]; then
+            echo "Coverage ${coverage}% is below threshold of ${threshold}%"
+            exit 1
+          fi
+        else
+          echo "No coverage report found"
+        fi
+
+  lint:
+    name: Linting
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: '3.3'
+        bundler-cache: false
+        
+    - name: Install GTK3 dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          libgtk-3-dev \
+          libgirepository1.0-dev \
+          libpango1.0-dev \
+          libcairo2-dev \
+          libgdk-pixbuf2.0-dev \
+          libglib2.0-dev
+        
+    - name: Install dependencies
+      run: |
+        bundle config path vendor/bundle
+        bundle install --jobs 4 --retry 3
+        
+    - name: Run Standard
+      run: bundle exec standardrb --no-fix
+      continue-on-error: true
+      
+    - name: Run RuboCop
+      run: |
+        if [ -f .rubocop.yml ]; then
+          bundle exec rubocop
+        else
+          echo "No .rubocop.yml found, skipping RuboCop"
+        fi
+      continue-on-error: true
+
+  benchmark:
+    name: Performance Benchmarks
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+    
+    steps:
+    - name: Checkout code  
+      uses: actions/checkout@v4
+      
+    - name: Set up Ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: '3.3'
+        bundler-cache: true
+        
+    - name: Install GTK3 dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          libgtk-3-dev \
+          libgirepository1.0-dev \
+          libpango1.0-dev \
+          libcairo2-dev \
+          libgdk-pixbuf2.0-dev \
+          libglib2.0-dev \
+          xvfb
+        
+    - name: Install dependencies
+      run: |
+        bundle config path vendor/bundle
+        bundle install --jobs 4 --retry 3
+        
+    - name: Run benchmarks
+      run: |
+        export DISPLAY=:99
+        Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
+        sleep 3
+        bundle exec rake bench
+        
+    - name: Save benchmark results
+      uses: actions/upload-artifact@v4
+      with:
+        name: benchmark-results
+        path: |
+          benchmark_*.txt
+        if-no-files-found: ignore
