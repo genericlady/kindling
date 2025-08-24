@@ -69,24 +69,25 @@ module Kindling
       }.first(limit)
     end
 
-    # Score a single path against query
+    # Score a single path against query (combined matching and scoring for efficiency)
     def score_path(path, query_chars, query_lower)
+      # Early exit for paths shorter than query
+      return 0 if path.length < query_chars.length
+      
       path_lower = path.downcase
       basename_lower = File.basename(path).downcase
-
-      # Quick reject if query not present as subsequence
-      return 0 unless subsequence_match?(path_lower, query_chars)
+      basename_start = path.length - basename_lower.length
 
       score = 0
       query_idx = 0
       last_match_idx = -1
-      in_basename = false
 
-      path_lower.chars.each_with_index do |char, idx|
-        # Track if we're in the basename
-        in_basename = true if idx >= (path.length - basename_lower.length)
+      # Single pass for both matching and scoring
+      path_lower.each_char.with_index do |char, idx|
+        # Skip if we've matched all query chars
+        break if query_idx >= query_chars.length
 
-        if query_idx < query_chars.length && char == query_chars[query_idx]
+        if char == query_chars[query_idx]
           # Base match score
           score += MATCH_BONUS
 
@@ -94,19 +95,19 @@ module Kindling
           score += CONSECUTIVE_BONUS if last_match_idx == idx - 1
 
           # Start of string/word bonus
-          if idx == 0 || SEPARATORS.include?(path[idx - 1])
+          if idx == 0 || (idx > 0 && SEPARATORS.include?(path[idx - 1]))
             score += START_BONUS
-          end
-
-          # After separator bonus
-          if idx > 0 && SEPARATORS.include?(path[idx - 1])
-            score += SEPARATOR_BONUS
-            # Extra bonus for path separators
-            score += PATH_SEPARATOR_BONUS if path[idx - 1] == PATH_SEPARATOR
+            
+            # After separator bonus (combined with above check)
+            if idx > 0
+              score += SEPARATOR_BONUS
+              # Extra bonus for path separators
+              score += PATH_SEPARATOR_BONUS if path[idx - 1] == PATH_SEPARATOR
+            end
           end
 
           # Basename bonus
-          score += BASENAME_BONUS if in_basename
+          score += BASENAME_BONUS if idx >= basename_start
 
           last_match_idx = idx
           query_idx += 1
@@ -115,17 +116,6 @@ module Kindling
 
       # Only return score if all query chars were matched
       (query_idx == query_chars.length) ? score : 0
-    end
-
-    # Check if query exists as subsequence in text
-    def subsequence_match?(text, query_chars)
-      query_idx = 0
-      text.each_char do |char|
-        if query_idx < query_chars.length && char == query_chars[query_idx]
-          query_idx += 1
-        end
-      end
-      query_idx == query_chars.length
     end
   end
 end
