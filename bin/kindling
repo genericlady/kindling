@@ -1,0 +1,25 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require_relative "../lib/kindling"
+
+# Handle Ctrl-C gracefully
+trap("INT") do
+  puts "\nExiting..."
+  exit 0
+end
+
+# Enable debug logging if KINDLING_DEBUG is set
+if ENV["KINDLING_DEBUG"]
+  Kindling::Logging.enable_debug!
+  Kindling::Logging.debug("Starting Kindling in debug mode")
+end
+
+# Start the application
+begin
+  Kindling::App.run(ARGV)
+rescue StandardError => e
+  $stderr.puts "Error: #{e.message}"
+  $stderr.puts e.backtrace if ENV["KINDLING_DEBUG"]
+  exit 1
+end
