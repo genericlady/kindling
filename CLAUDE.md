@@ -105,3 +105,38 @@ kindling/
 ├─ Gemfile
 └─ Rakefile
 
+Key design details
+
+### Indexer
+* Use Find.find with Find.prune on ignore dirs
+* Optional file size cap (e.g., skip files > 5 MB for future content preview)
+* Emit periodic “heartbeat” to UI with count (every 250ms)
+* Provide cancel! flag checked each N iterations to abort quickly
+
+⠀
+### Fuzzy matching
+* Subsequence score with bonuses: consecutive hits, start-of-segment (/, _, -)
+* Precompute lowercase path and basename; prefer basename matches
+* Return top N (cap to 5k in list to avoid GTK churn)
+
+⠀
+### Tree rendering
+* Build nested hash { "dir" => { "file" => true } }
+* Stable sorting; render ├──/└── box-drawing chars; include root folder display name
+* Unit tests cover deep nesting, shared prefixes, ordering, unicode filenames
+
+⠀
+### GTK performance
+* Use Gtk::ListStore with TreeView; batch inserts (freeze/thaw)
+* Avoid per-row widget creation; text renderer only
+* Debounce search updates; keep UI responsive
+
+⠀
+### Clipboard
+* Gdk::Display.default + Gtk::Clipboard.get with Gdk::SELECTION_CLIPBOARD
+* Title “toast” tick (✓ Copied) via temporary window title change
+
+⠀
+### Config & logging
+* Kindling::Config defaults; XDG_CONFIG_HOME path
+* ENV["KINDLING_DEBUG"] toggles verbose logs; Logging.debug/info/warn
