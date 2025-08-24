@@ -1,3 +1,5 @@
+IMPORTANT ALWAYS ASK FOR PERMISSION WHEN MAKING COMMITS
+
 # TESTING
 - Code Coverage should always be >= 85%
 - to run tests
