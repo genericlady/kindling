@@ -46,38 +46,61 @@ my-project/
 
 ## 🚀 Getting Started
 
-### Prerequisites
+### Quick Start (< 5 minutes)
 
-- Ruby **3.2+** (tested with 3.3.5)  
-- Bundler  
-- GTK3 dev libraries:
-  - **macOS**: `brew install gtk+3`
-  - **Ubuntu/Debian**: `apt install libgtk-3-dev`
-  - **Fedora**: `dnf install gtk3-devel`
-
-### Install
-
+#### macOS
 ```bash
+# Install dependencies (2 min)
+brew install gtk+3 gobject-introspection pango cairo gdk-pixbuf glib
+
+# Clone and setup (1 min)
 git clone https://github.com/yourusername/kindling.git
 cd kindling
 bundle install
+
+# Run! (< 1 min)
+bin/kindling
 ```
 
-### Run
+#### Ubuntu/Debian
+```bash
+# Install dependencies (2 min)
+sudo apt update
+sudo apt install -y ruby-full ruby-bundler libgtk-3-dev \
+  libgirepository1.0-dev libpango1.0-dev libcairo2-dev \
+  libgdk-pixbuf2.0-dev libglib2.0-dev
+
+# Clone and setup (1 min)
+git clone https://github.com/yourusername/kindling.git
+cd kindling
+bundle install
+
+# Run! (< 1 min)
+bin/kindling
+```
+
+📚 **Detailed setup guides**: [macOS](docs/SETUP_MACOS.md) | [Linux](docs/SETUP_LINUX.md)
+
+### Usage
 
 ```bash
 # Run the app
 bin/kindling
 
-# Or with debug logging
-KINDLING_DEBUG=1 bin/kindling
+# Show version
+bin/kindling --version
+
+# Enable debug output
+bin/kindling --debug
+
+# Show help
+bin/kindling --help
 
 # Run tests
 rake test
 
 # Run benchmarks
 rake bench
-
 ```
 
 ---
