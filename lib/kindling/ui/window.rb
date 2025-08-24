@@ -34,6 +34,10 @@ module Kindling
         @callbacks[:copy_requested] = block
       end
 
+      def on_include_contents_changed(&block)
+        @callbacks[:include_contents_changed] = block
+      end
+
       # UI updates
       def update_progress(message)
         @header.update_progress(message)
@@ -76,6 +80,10 @@ module Kindling
         end
       end
 
+      def include_contents?
+        @header.include_contents?
+      end
+
       private
 
       def setup_ui
@@ -113,6 +121,10 @@ module Kindling
 
         @header.on_copy_clicked do
           @callbacks[:copy_requested]&.call
+        end
+
+        @header.on_include_contents_changed do |checked|
+          @callbacks[:include_contents_changed]&.call(checked)
         end
 
         # Wire file list selection changes

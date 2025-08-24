@@ -14,6 +14,8 @@ module Kindling
       @selected_paths = Selection.new
       @indexer = nil
       @index_generation = 0
+      @include_contents = false
+      @current_root = nil
     end
 
     def run(argv)
@@ -37,6 +39,7 @@ module Kindling
       @window.on_search_changed { |query| filter_files(query) }
       @window.on_selection_changed { |paths| update_selection(paths) }
       @window.on_copy_requested { copy_tree_to_clipboard }
+      @window.on_include_contents_changed { |checked| @include_contents = checked }
 
       @window.show_all
       Logging.debug("Window activated and shown")
@@ -134,12 +137,114 @@ module Kindling
     def copy_tree_to_clipboard
       return if @selected_paths.empty?
 
+      # Generate the tree
       tree = TreeRenderer.render(@selected_paths.to_a)
-      if Clipboard.copy(tree)
-        @window.flash_success("✓ Copied")
-        Logging.debug("Copied #{@selected_paths.size} paths to clipboard")
+
+      # Build the output (ensure UTF-8 encoding)
+      output = tree.dup.force_encoding("UTF-8")
+
+      # Add file contents if requested
+      if @include_contents && @current_root
+        file_contents = format_file_contents(@selected_paths.to_a)
+        separator = String.new("\n\n", encoding: "UTF-8")
+        output = output + separator + file_contents
+      end
+
+      if Clipboard.copy(output)
+        message = @include_contents ? "✓ Copied with contents" : "✓ Copied"
+        @window.flash_success(message)
+        Logging.debug("Copied #{@selected_paths.size} paths to clipboard#{@include_contents ? " with contents" : ""}")
       else
         Logging.error("Failed to copy to clipboard")
+      end
+    end
+
+    def format_file_contents(relative_paths)
+      contents = []
+
+      relative_paths.each do |relative_path|
+        full_path = File.join(@current_root, relative_path)
+
+        # Skip directories and unreadable files
+        next unless File.file?(full_path) && File.readable?(full_path)
+
+        begin
+          # Read file content with UTF-8 encoding (limit size for safety)
+          content = File.read(full_path, 1_000_000, encoding: "UTF-8", invalid: :replace, undef: :replace)
+
+          # Detect language for syntax highlighting
+          language = detect_language(relative_path)
+
+          # Add formatted content block
+          contents << "## #{relative_path}\n\n```#{language}\n#{content}\n```"
+        rescue => e
+          Logging.debug("Could not read file #{relative_path}: #{e.message}")
+          contents << "## #{relative_path}\n\n```\n[Error reading file: #{e.message}]\n```"
+        end
+      end
+
+      contents.join("\n\n").force_encoding("UTF-8")
+    end
+
+    def detect_language(filepath)
+      # Extract extension
+      ext = File.extname(filepath).downcase
+
+      # Map common extensions to languages
+      case ext
+      when ".rb", ".rake" then "ruby"
+      when ".js", ".jsx" then "javascript"
+      when ".ts", ".tsx" then "typescript"
+      when ".py" then "python"
+      when ".java" then "java"
+      when ".c" then "c"
+      when ".cpp", ".cc", ".cxx" then "cpp"
+      when ".cs" then "csharp"
+      when ".go" then "go"
+      when ".rs" then "rust"
+      when ".php" then "php"
+      when ".swift" then "swift"
+      when ".kt", ".kts" then "kotlin"
+      when ".scala" then "scala"
+      when ".r" then "r"
+      when ".sh", ".bash" then "bash"
+      when ".zsh" then "zsh"
+      when ".fish" then "fish"
+      when ".ps1" then "powershell"
+      when ".html", ".htm" then "html"
+      when ".xml" then "xml"
+      when ".css" then "css"
+      when ".scss", ".sass" then "scss"
+      when ".less" then "less"
+      when ".json" then "json"
+      when ".yaml", ".yml" then "yaml"
+      when ".toml" then "toml"
+      when ".ini" then "ini"
+      when ".sql" then "sql"
+      when ".md", ".markdown" then "markdown"
+      when ".tex" then "latex"
+      when ".vim" then "vim"
+      when ".lua" then "lua"
+      when ".pl" then "perl"
+      when ".ex", ".exs" then "elixir"
+      when ".clj", ".cljs" then "clojure"
+      when ".elm" then "elm"
+      when ".hs" then "haskell"
+      when ".ml", ".mli" then "ocaml"
+      when ".fs", ".fsx" then "fsharp"
+      when ".vue" then "vue"
+      when ".svelte" then "svelte"
+      else
+        # Check for special filenames
+        case File.basename(filepath).downcase
+        when "makefile", "gnumakefile" then "makefile"
+        when "dockerfile" then "dockerfile"
+        when "gemfile", "rakefile" then "ruby"
+        when "package.json", "tsconfig.json" then "json"
+        when ".gitignore", ".dockerignore" then "gitignore"
+        else
+          "" # No language hint
+        end
       end
     end
   end

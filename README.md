@@ -24,9 +24,12 @@ Perfect for building prompts where you need to "prime" the AI with project struc
 - **Multi-select** – pick multiple files at once  
 - **Tree preview** – see the hierarchy of your selected files as an ASCII tree  
 - **One-click copy** – instantly copy that tree to your clipboard  
-- **Smart ignoring** – automatically skips `.git`, `node_modules`, `.DS_Store` and other noise
+- **Include file contents** – optionally include actual file contents with syntax highlighting
+- **Smart ignoring** – respects `.gitignore` and automatically skips `.git`, `node_modules`, `.DS_Store` and other noise
 
 ### Example output:
+
+**Tree only:**
 ```
 my-project/
 ├── app/
@@ -40,6 +43,30 @@ my-project/
 │   └── models/
 │       └── user_test.rb
 └── Gemfile
+```
+
+**With "Include contents" checked:**
+```
+my-project/
+├── app/
+│   └── models/
+│       └── user.rb
+└── Gemfile
+
+## app/models/user.rb
+
+```ruby
+class User < ApplicationRecord
+  validates :email, presence: true, uniqueness: true
+  has_many :posts
+end
+```
+
+## Gemfile
+
+```ruby
+source "https://rubygems.org"
+gem "rails", "~> 7.0"
 ```
 
 ---

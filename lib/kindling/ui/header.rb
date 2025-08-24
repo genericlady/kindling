@@ -33,6 +33,10 @@ module Kindling
         @callbacks[:copy_clicked] = block
       end
 
+      def on_include_contents_changed(&block)
+        @callbacks[:include_contents_changed] = block
+      end
+
       # UI updates
       def update_progress(message)
         @progress_label.text = message if @progress_label
@@ -54,6 +58,10 @@ module Kindling
 
       def disable_copy_button
         @copy_button.sensitive = false
+      end
+
+      def include_contents?
+        @include_contents_check&.active? || false
       end
 
       private
@@ -80,6 +88,14 @@ module Kindling
         @search_entry.placeholder_text = "Search files..."
         @search_entry.signal_connect("search-changed") { on_search_changed_internal }
         pack_start(@search_entry, expand: true, fill: true, padding: 0)
+
+        # Include contents checkbox
+        @include_contents_check = Gtk::CheckButton.new("Include contents")
+        @include_contents_check.tooltip_text = "Include file contents in the copied output"
+        @include_contents_check.signal_connect("toggled") do
+          @callbacks[:include_contents_changed]&.call(@include_contents_check.active?)
+        end
+        pack_start(@include_contents_check, expand: false, fill: false, padding: 0)
 
         # Copy button
         @copy_button = Gtk::Button.new(label: "Copy Selected Tree")
