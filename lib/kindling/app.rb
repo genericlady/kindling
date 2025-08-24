@@ -43,21 +43,38 @@ module Kindling
     end
     
     def index_folder(root_path)
-      # TODO: Cancel any existing indexing operation
+      # Cancel any existing indexing operation
+      @indexer&.cancel!
       @index_generation += 1
       current_gen = @index_generation
       
       @indexer = Indexer.new
+      @current_root = root_path
+      
+      # Show initial progress
+      @window.show_progress_spinner
+      @window.update_progress("Scanning #{File.basename(root_path)}...")
       
       # Run indexing in a worker thread
-      Thread.new do
+      @indexing_thread = Thread.new do
         begin
+          start_time = Time.now
+          last_update = Time.now
+          
           @indexer.index(root_path, 
             on_progress: ->(count) { 
-              GLib::Idle.add { 
-                @window.update_progress("Indexing #{count} files...") if current_gen == @index_generation
-                false # Don't repeat
-              }
+              # Throttle updates to every 100ms
+              now = Time.now
+              if now - last_update > 0.1
+                GLib::Idle.add { 
+                  if current_gen == @index_generation
+                    elapsed = (now - start_time).round(1)
+                    @window.update_progress("Indexing... #{count} files (#{elapsed}s)")
+                  end
+                  false # Don't repeat
+                }
+                last_update = now
+              end
             }
           ) do |paths|
             # On completion, update UI on main thread
@@ -65,20 +82,30 @@ module Kindling
               if current_gen == @index_generation
                 @paths = paths
                 @window.update_file_list(@paths)
-                @window.update_progress("#{@paths.size} files indexed")
-                Logging.debug("Indexed #{@paths.size} files from #{root_path}")
+                @window.hide_progress_spinner
+                elapsed = (Time.now - start_time).round(1)
+                @window.update_progress("#{@paths.size} files • #{File.basename(root_path)} • #{elapsed}s")
+                Logging.debug("Indexed #{@paths.size} files from #{root_path} in #{elapsed}s")
+                
+                # Log memory usage if in debug mode
+                Config.log_memory("after indexing") if ENV["KINDLING_DEBUG"]
               end
               false
             end
           end
         rescue => e
-          Logging.error("Indexing failed: #{e.message}")
+          GLib::Idle.add do
+            @window.hide_progress_spinner
+            @window.update_progress("Indexing failed: #{e.message}")
+            Logging.error("Indexing failed: #{e.message}")
+            false
+          end
         end
       end
     end
     
     def filter_files(query)
-      # TODO: Implement debounced search
+      # Debouncing is handled by the header component
       filtered = if query.nil? || query.empty?
         @paths.first(10_000) # Cap for UI performance
       else

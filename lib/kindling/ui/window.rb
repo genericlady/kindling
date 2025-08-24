@@ -39,6 +39,14 @@ module Kindling
         @header.update_progress(message)
       end
       
+      def show_progress_spinner
+        @header.show_progress_spinner
+      end
+      
+      def hide_progress_spinner
+        @header.hide_progress_spinner
+      end
+      
       def update_file_list(paths)
         @file_list.update(paths)
       end

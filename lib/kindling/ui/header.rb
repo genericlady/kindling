@@ -9,6 +9,8 @@ module Kindling
         
         @callbacks = {}
         @debounce_timer = nil
+        @spinner = nil
+        @progress_label = nil
         
         set_margin_top(5)
         set_margin_bottom(5)
@@ -33,7 +35,17 @@ module Kindling
       
       # UI updates
       def update_progress(message)
-        @folder_button.label = message
+        @progress_label.text = message if @progress_label
+      end
+      
+      def show_progress_spinner
+        @spinner.start if @spinner
+        @spinner.show if @spinner
+      end
+      
+      def hide_progress_spinner
+        @spinner.stop if @spinner
+        @spinner.hide if @spinner
       end
       
       def enable_copy_button
@@ -51,6 +63,17 @@ module Kindling
         @folder_button = Gtk::Button.new(label: "Open Folder")
         @folder_button.signal_connect("clicked") { choose_folder }
         pack_start(@folder_button, expand: false, fill: false, padding: 0)
+        
+        # Progress spinner (hidden by default)
+        @spinner = Gtk::Spinner.new
+        @spinner.hide
+        pack_start(@spinner, expand: false, fill: false, padding: 0)
+        
+        # Progress label
+        @progress_label = Gtk::Label.new("")
+        @progress_label.ellipsize = :end
+        @progress_label.max_width_chars = 30
+        pack_start(@progress_label, expand: false, fill: false, padding: 5)
         
         # Search entry (takes most space)
         @search_entry = Gtk::SearchEntry.new
@@ -79,9 +102,6 @@ module Kindling
         if dialog.run == :accept
           folder = dialog.filename
           @callbacks[:folder_chosen]&.call(folder)
-          
-          # Update button to show folder name
-          @folder_button.label = File.basename(folder)
         end
         
         dialog.destroy
