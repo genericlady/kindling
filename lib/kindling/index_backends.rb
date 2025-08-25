@@ -16,7 +16,27 @@ module Kindling
     end
 
     def find_rg
-      @rg ||= which("rg")
+      return @rg if defined?(@rg)
+
+      # Check standard PATH first
+      @rg = which("rg") || which("ripgrep")
+      return @rg if @rg
+
+      # Check common installation locations including Claude Code's bundled ripgrep
+      common_paths = [
+        "/Users/#{ENV["USER"]}/.claude/local/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/arm64-darwin/rg",
+        "/usr/local/bin/rg",
+        "/opt/homebrew/bin/rg"
+      ]
+
+      common_paths.each do |p|
+        if File.executable?(p) && !File.directory?(p)
+          @rg = p
+          return @rg
+        end
+      end
+
+      @rg = nil
     end
 
     def run_fd(root, respect_gitignore: true)
@@ -33,9 +53,10 @@ module Kindling
         "-I"
       end
 
-      # Add explicit ignores for common files and directories including .git
+      # Add explicit ignores for common files and directories including .git and vendor
       cmd.concat(["-E", ".git", "-E", ".DS_Store", "-E", "*.pyc", "-E", "__pycache__",
-        "-E", "node_modules", "."])
+        "-E", "node_modules", "-E", "vendor", "-E", "tmp", "-E", "log", "-E", ".bundle",
+        "-E", "coverage", "-E", "build", "-E", "dist", "."])
       run_streaming(root, cmd, nul_sep: true)
     end
 
@@ -51,7 +72,9 @@ module Kindling
       end
 
       cmd.concat(["--iglob", "!.git", "--iglob", "!.DS_Store", "--iglob", "!*.pyc",
-        "--iglob", "!__pycache__", "--iglob", "!node_modules", "-0"])
+        "--iglob", "!__pycache__", "--iglob", "!node_modules", "--iglob", "!vendor",
+        "--iglob", "!tmp", "--iglob", "!log", "--iglob", "!.bundle", "--iglob", "!coverage",
+        "--iglob", "!build", "--iglob", "!dist", "-0"])
       run_streaming(root, cmd, nul_sep: true)
     end
 
