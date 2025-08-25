@@ -26,7 +26,7 @@ Perfect for building prompts where you need to "prime" the AI with project struc
 - **One-click copy** – instantly copy that tree to your clipboard  
 - **Include file contents** – optionally include actual file contents with syntax highlighting
 - **Smart ignoring** – respects `.gitignore` and automatically skips `.git`, `node_modules`, `.DS_Store` and other noise
-- **Enterprise-scale support** – handles up to 2 million files (configurable)
+- **Enterprise-scale support** – no artificial file limits, handles massive monolithic repositories
 
 ### Example output:
 
@@ -129,31 +129,30 @@ rake bench
 
 ### Configuration for Large/Enterprise Repositories
 
-Kindling can handle enterprise-scale monolithic repositories. If you're working with very large codebases, you can tune the limits via environment variables:
+Kindling is designed to handle enterprise-scale monolithic repositories with **no artificial file limits**. By default, it will index all files it can find.
 
 ```bash
-# Increase file limit (default: 2,000,000)
-export KINDLING_MAX_FILES=5000000
+# Optional: Set limits if needed (default: unlimited)
+export KINDLING_MAX_FILES=1000000  # Set to 0 for unlimited (default)
 
-# Increase memory limit in MB (default: 1000)
-export KINDLING_MAX_MEMORY_MB=2000
+# Memory limit in MB (default: 2000)
+export KINDLING_MAX_MEMORY_MB=4000
 
-# Increase directory size limit in MB (default: 500)
-export KINDLING_MAX_DIR_SIZE_MB=1000
+# Optional: Skip very large directories (default: no limit)
+export KINDLING_MAX_DIR_SIZE_MB=1000  # Set to 0 to disable (default)
+export KINDLING_MAX_DIR_FILES=100000  # Set to 0 to disable (default)
 
-# Increase max files per directory (default: 50,000)
-export KINDLING_MAX_DIR_FILES=100000
-
-# Run with debug logging to see what's being indexed/skipped
+# Run with debug logging to monitor indexing progress
 export KINDLING_DEBUG=1
 bin/kindling
 ```
 
 **Tips for large repositories:**
-- The indexer will show progress every 500 files
-- Check the console output to see if directories are being skipped
-- Use `.gitignore` to exclude build artifacts and dependencies
-- The first index might take 30-60 seconds for very large repos
+- No file count limits by default - indexes everything
+- Progress updates every 1000 files to reduce overhead
+- Use `.gitignore` to exclude build artifacts and generated files
+- Indexing speed typically 5,000-10,000 files/second
+- First index of very large repos (100k+ files) may take 30-60 seconds
 
 ---
 
