@@ -2,11 +2,8 @@ NEVER make git commits without explicit user permission. Always ask 'Would you l
   for a 'yes' or similar confirmation before running git commit. The user saying 'make commit' IS permission. It IS NOT permission for the rest of the session.
 
 # TESTING
-- Code Coverage should always be >= 85%
-- to run tests
-```
-rake test
-```
+1. Code Coverage should always be >= 85%
+1. Run and Fix `rake test`
 
 # Github Actions
 - use `act` to run and debug actions locally
