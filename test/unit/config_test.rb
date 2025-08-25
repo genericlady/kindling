@@ -201,16 +201,16 @@ class ConfigTest < Minitest::Test
     # Test that environment variables can override defaults
     # Note: These are set at module load time, so we can't easily test runtime changes
     # But we can verify the current values respect ENV if set
-    
+
     # Save current ENV values
     original_max_files = ENV["KINDLING_MAX_FILES"]
-    
+
     # Since the constants are already loaded, we can only verify they use ENV.fetch
     # This test mainly documents the feature exists
     assert_kind_of Integer, Kindling::Config::MAX_FILES
     assert_kind_of Integer, Kindling::Config::MAX_MEMORY_MB
     assert_kind_of Integer, Kindling::Config::MAX_DIR_SIZE_MB
-    
+
     # Restore original ENV
     if original_max_files
       ENV["KINDLING_MAX_FILES"] = original_max_files
