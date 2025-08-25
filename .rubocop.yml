@@ -63,10 +63,6 @@ Metrics/BlockLength:
     - 'Rakefile'
     - '**/*.rake'
 
-# Testing specific
-Minitest/MultipleAssertions:
-  Max: 10
-
 # Allow TODO comments during development
 Style/InlineComment:
   Enabled: false

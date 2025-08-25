@@ -2,6 +2,37 @@
 # frozen_string_literal: true
 
 require_relative "../lib/kindling"
+require "optparse"
+
+# Parse command line options
+options = {}
+parser = OptionParser.new do |opts|
+  opts.banner = "Usage: kindling [options]"
+  
+  opts.on("-v", "--version", "Show version") do
+    puts "Kindling #{Kindling::VERSION}"
+    exit 0
+  end
+  
+  opts.on("-d", "--debug", "Enable debug output") do
+    options[:debug] = true
+  end
+  
+  opts.on("-h", "--help", "Show this help message") do
+    puts opts
+    puts "\nKindling is a file tree visualization tool for AI context building."
+    puts "See https://github.com/yourusername/kindling for more information."
+    exit 0
+  end
+end
+
+begin
+  parser.parse!(ARGV)
+rescue OptionParser::InvalidOption => e
+  $stderr.puts "Error: #{e.message}"
+  $stderr.puts "Use 'kindling --help' for usage information."
+  exit 1
+end
 
 # Handle Ctrl-C gracefully
 trap("INT") do
@@ -9,10 +40,12 @@ trap("INT") do
   exit 0
 end
 
-# Enable debug logging if KINDLING_DEBUG is set
-if ENV["KINDLING_DEBUG"]
+# Enable debug logging if requested
+if options[:debug] || ENV["KINDLING_DEBUG"]
   Kindling::Logging.enable_debug!
-  Kindling::Logging.debug("Starting Kindling in debug mode")
+  Kindling::Logging.debug("Starting Kindling v#{Kindling::VERSION} in debug mode")
+  Kindling::Logging.debug("Ruby #{RUBY_VERSION}, GTK #{Gtk::Version::STRING}")
+  Kindling::Logging.debug("Platform: #{RUBY_PLATFORM}")
 end
 
 # Start the application
@@ -20,6 +53,6 @@ begin
   Kindling::App.run(ARGV)
 rescue StandardError => e
   $stderr.puts "Error: #{e.message}"
-  $stderr.puts e.backtrace if ENV["KINDLING_DEBUG"]
+  $stderr.puts e.backtrace if options[:debug] || ENV["KINDLING_DEBUG"]
   exit 1
 end

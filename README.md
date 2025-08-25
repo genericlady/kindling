@@ -24,9 +24,12 @@ Perfect for building prompts where you need to "prime" the AI with project struc
 - **Multi-select** – pick multiple files at once  
 - **Tree preview** – see the hierarchy of your selected files as an ASCII tree  
 - **One-click copy** – instantly copy that tree to your clipboard  
-- **Smart ignoring** – automatically skips `.git`, `node_modules`, `.DS_Store` and other noise
+- **Include file contents** – optionally include actual file contents with syntax highlighting
+- **Smart ignoring** – respects `.gitignore` and automatically skips `.git`, `node_modules`, `.DS_Store` and other noise
 
 ### Example output:
+
+**Tree only:**
 ```
 my-project/
 ├── app/
@@ -42,42 +45,89 @@ my-project/
 └── Gemfile
 ```
 
+**With "Include contents" checked:**
+```
+my-project/
+├── app/
+│   └── models/
+│       └── user.rb
+└── Gemfile
+
+## app/models/user.rb
+
+```ruby
+class User < ApplicationRecord
+  validates :email, presence: true, uniqueness: true
+  has_many :posts
+end
+```
+
+## Gemfile
+
+```ruby
+source "https://rubygems.org"
+gem "rails", "~> 7.0"
+```
+
 ---
 
 ## 🚀 Getting Started
 
-### Prerequisites
+### Quick Start (< 5 minutes)
 
-- Ruby **3.2+** (tested with 3.3.5)  
-- Bundler  
-- GTK3 dev libraries:
-  - **macOS**: `brew install gtk+3`
-  - **Ubuntu/Debian**: `apt install libgtk-3-dev`
-  - **Fedora**: `dnf install gtk3-devel`
-
-### Install
-
+#### macOS
 ```bash
+# Install dependencies (2 min)
+brew install gtk+3 gobject-introspection pango cairo gdk-pixbuf glib
+
+# Clone and setup (1 min)
 git clone https://github.com/yourusername/kindling.git
 cd kindling
 bundle install
+
+# Run! (< 1 min)
+bin/kindling
 ```
 
-### Run
+#### Ubuntu/Debian
+```bash
+# Install dependencies (2 min)
+sudo apt update
+sudo apt install -y ruby-full ruby-bundler libgtk-3-dev \
+  libgirepository1.0-dev libpango1.0-dev libcairo2-dev \
+  libgdk-pixbuf2.0-dev libglib2.0-dev
+
+# Clone and setup (1 min)
+git clone https://github.com/yourusername/kindling.git
+cd kindling
+bundle install
+
+# Run! (< 1 min)
+bin/kindling
+```
+
+📚 **Detailed setup guides**: [macOS](docs/SETUP_MACOS.md) | [Linux](docs/SETUP_LINUX.md)
+
+### Usage
 
 ```bash
 # Run the app
 bin/kindling
 
-# Or with debug logging
-KINDLING_DEBUG=1 bin/kindling
+# Show version
+bin/kindling --version
+
+# Enable debug output
+bin/kindling --debug
+
+# Show help
+bin/kindling --help
 
 # Run tests
 rake test
 
 # Run benchmarks
 rake bench
-
 ```
 
 ---
@@ -149,7 +199,11 @@ rake coverage
 ### Code Style
 We use both RuboCop and Standard for linting:
 ```bash
+# Check for style issues
 rake lint
+
+# Auto-fix style issues
+rake lint:fix
 ```
 
 ---

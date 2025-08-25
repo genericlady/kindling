@@ -14,11 +14,11 @@ group :development, :test do
   gem "minitest", "~> 5.20"
   gem "minitest-reporters", "~> 1.6"
   gem "simplecov", "~> 0.22", require: false
-  
+
   # Code quality
   gem "rubocop", "~> 1.50"
   gem "standard", ">= 1.35.1"
-  
+
   # Build tools
   gem "rake", "~> 13.1"
 end
