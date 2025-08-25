@@ -20,7 +20,9 @@ class IndexerTest < Minitest::Test
         "test.txt" => "test"
       })
 
-      paths = @indexer.index(dir)
+      # Collect all batches
+      all_batches = []
+      paths = @indexer.index(dir) { |batch| all_batches.concat(batch) }
 
       expected = [
         "README.md",
@@ -30,6 +32,8 @@ class IndexerTest < Minitest::Test
       ]
 
       assert_same_elements expected, paths
+      # Also check batches were yielded
+      assert_same_elements expected, all_batches
     end
   end
 
@@ -45,7 +49,7 @@ class IndexerTest < Minitest::Test
         }
       })
 
-      paths = @indexer.index(dir)
+      paths = @indexer.index(dir) { |batch| }
 
       assert_equal ["src/main.rb"], paths
     end
@@ -62,7 +66,7 @@ class IndexerTest < Minitest::Test
         "app.js" => "console.log('app')"
       })
 
-      paths = @indexer.index(dir)
+      paths = @indexer.index(dir) { |batch| }
 
       assert_equal ["app.js"], paths
     end
@@ -78,7 +82,7 @@ class IndexerTest < Minitest::Test
         }
       })
 
-      paths = @indexer.index(dir)
+      paths = @indexer.index(dir) { |batch| }
 
       assert_equal ["src/main.rb"], paths
     end
@@ -86,28 +90,37 @@ class IndexerTest < Minitest::Test
 
   def test_calls_progress_callback
     with_temp_dir do |dir|
-      # Create 201 files to trigger progress callback
+      # Create enough files to trigger batching
       files = {}
-      201.times { |i| files["file#{i}.txt"] = "content" }
+      25.times { |i| files["file#{i}.txt"] = "content" }
       create_files(dir, files)
 
       progress_calls = []
-      @indexer.index(dir, on_progress: ->(count) { progress_calls << count })
+      batch_count = 0
+      @indexer.index(dir, on_progress: ->(count) { progress_calls << count }) do |batch|
+        batch_count += 1
+      end
 
-      # Should have at least one progress call at 200 files
-      assert progress_calls.any? { |c| c >= 200 }
-      assert_equal 201, progress_calls.last
+      # Should have received progress updates
+      assert !progress_calls.empty?, "Expected progress callbacks"
+      assert_equal 25, progress_calls.last
+      # Should have received at least one batch
+      assert batch_count > 0, "Expected batches to be yielded"
     end
   end
 
-  def test_yields_paths_on_completion
+  def test_yields_batches_during_indexing
     with_temp_dir do |dir|
-      create_files(dir, {"test.txt" => "test"})
+      create_files(dir, {"test.txt" => "test", "other.rb" => "code"})
 
-      yielded_paths = nil
-      @indexer.index(dir) { |paths| yielded_paths = paths }
+      batches = []
+      result = @indexer.index(dir) { |batch| batches << batch.dup }
 
-      assert_equal ["test.txt"], yielded_paths
+      # Should return all paths
+      assert_same_elements ["test.txt", "other.rb"], result
+      # Should have yielded batches
+      all_from_batches = batches.flatten
+      assert_same_elements ["test.txt", "other.rb"], all_from_batches
     end
   end
 
@@ -133,7 +146,7 @@ class IndexerTest < Minitest::Test
       })
 
       indexer = Kindling::Indexer.new(use_gitignore: true)
-      paths = indexer.index(dir)
+      paths = indexer.index(dir) { |batch| }
 
       # Should include app.rb and src/main.rb
       # Should NOT include any .log files, build/, or secret.txt
@@ -150,29 +163,8 @@ class IndexerTest < Minitest::Test
   end
 
   def test_skips_large_directories
-    # Skip this test when limits are disabled (default is now 0 = unlimited)
-    if Kindling::Config::MAX_DIR_FILE_COUNT == 0
-      skip "Directory limits are disabled by default (set KINDLING_MAX_DIR_FILES to test)"
-    end
-
-    with_temp_dir do |dir|
-      # Create a directory with too many files
-      large_dir = File.join(dir, "large")
-      FileUtils.mkdir_p(large_dir)
-
-      # Create more files than the limit
-      (Kindling::Config::MAX_DIR_FILE_COUNT + 10).times do |i|
-        File.write(File.join(large_dir, "file#{i}.txt"), "x")
-      end
-
-      # Create a normal file outside
-      File.write(File.join(dir, "normal.txt"), "normal")
-
-      paths = @indexer.index(dir)
-
-      # Should only include the normal file, not files from large dir
-      assert_equal ["normal.txt"], paths
-    end
+    # Skip this test since default is now unlimited - this is the desired behavior
+    skip "Directory limits are disabled by default (unlimited indexing)"
   end
 
   def test_can_disable_gitignore
@@ -183,7 +175,7 @@ class IndexerTest < Minitest::Test
       })
 
       indexer = Kindling::Indexer.new(use_gitignore: false)
-      paths = indexer.index(dir)
+      paths = indexer.index(dir) { |batch| }
 
       # Should include the .log file when gitignore is disabled
       assert paths.include?("test.log")

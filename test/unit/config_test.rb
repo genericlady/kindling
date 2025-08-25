@@ -18,14 +18,17 @@ class ConfigTest < Minitest::Test
   end
 
   def test_constants_defined
-    assert_equal 0, Kindling::Config::MAX_FILES  # 0 = unlimited
+    assert_equal 500_000, Kindling::Config::MAX_FILES  # New default
     assert_equal 5_000, Kindling::Config::MAX_VISIBLE_RESULTS
     assert_equal 1_000, Kindling::Config::MAX_PREVIEW_PATHS
     assert_equal 200, Kindling::Config::DEBOUNCE_MS
     assert_equal 1000, Kindling::Config::PROGRESS_UPDATE_INTERVAL
-    assert_equal 0, Kindling::Config::MAX_DIR_SIZE_MB  # 0 = no limit
-    assert_equal 0, Kindling::Config::MAX_DIR_FILE_COUNT  # 0 = no limit
+    assert_equal 250, Kindling::Config::MAX_DIR_SIZE_MB  # New default
+    assert_equal 15_000, Kindling::Config::MAX_DIR_FILE_COUNT  # New default
     assert_equal 2000, Kindling::Config::MAX_MEMORY_MB
+    assert_equal 2000, Kindling::Config::BATCH_SIZE  # New constant
+    assert_equal 10_000, Kindling::Config::WALK_QUEUE_SIZE  # New constant
+    assert_equal :auto, Kindling::Config::INDEX_BACKEND  # New constant
     assert_equal 1200, Kindling::Config::WINDOW_WIDTH
     assert_equal 800, Kindling::Config::WINDOW_HEIGHT
     assert_equal 0.6, Kindling::Config::PANE_POSITION

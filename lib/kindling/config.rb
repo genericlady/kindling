@@ -7,7 +7,7 @@ module Kindling
 
     # Performance settings (can be overridden with environment variables)
     # File limits - set to 0 for unlimited
-    MAX_FILES = ENV.fetch("KINDLING_MAX_FILES", "0").to_i  # 0 = unlimited (default for enterprise)
+    MAX_FILES = ENV.fetch("KINDLING_MAX_FILES", "500000").to_i  # Reasonable cap for memory
 
     # UI performance limits (these stay to prevent UI lag)
     MAX_VISIBLE_RESULTS = ENV.fetch("KINDLING_MAX_VISIBLE", "5000").to_i
@@ -17,11 +17,24 @@ module Kindling
 
     # Directory size checks - set to 0 to disable
     # These are kept as safety checks but can be disabled
-    MAX_DIR_SIZE_MB = ENV.fetch("KINDLING_MAX_DIR_SIZE_MB", "0").to_i  # 0 = no limit
-    MAX_DIR_FILE_COUNT = ENV.fetch("KINDLING_MAX_DIR_FILES", "0").to_i  # 0 = no limit
+    MAX_DIR_SIZE_MB = ENV.fetch("KINDLING_MAX_DIR_SIZE_MB", "250").to_i  # Prune huge dirs
+    MAX_DIR_FILE_COUNT = ENV.fetch("KINDLING_MAX_DIR_FILES", "15000").to_i  # Prune dense dirs
 
     # Memory limits - still useful to prevent runaway memory usage
     MAX_MEMORY_MB = ENV.fetch("KINDLING_MAX_MEMORY_MB", "2000").to_i  # 2GB default
+
+    # Streaming/batching settings
+    BATCH_SIZE = ENV.fetch("KINDLING_BATCH_SIZE", "2000").to_i  # Files per batch
+    WALK_QUEUE_SIZE = ENV.fetch("KINDLING_WALK_QUEUE_SIZE", "10000").to_i  # Backpressure queue
+
+    # Index backend preference: :auto, :fd, :rg, :none (force Ruby walker)
+    INDEX_BACKEND = ENV.fetch("KINDLING_INDEX_BACKEND", "auto").to_sym
+
+    # Index strategy (future): :full, :incremental
+    INDEX_STRATEGY = ENV.fetch("KINDLING_INDEX_STRATEGY", "incremental").to_sym
+
+    # Progressive UI updates (experimental)
+    PROGRESSIVE_UI = ENV.fetch("KINDLING_PROGRESSIVE_UI", "false") == "true"
 
     # UI settings
     WINDOW_WIDTH = 1200
