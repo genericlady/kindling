@@ -10,7 +10,7 @@ require_relative "cancellation_token"
 module Kindling
   class Indexer
     DEFAULT_IGNORES = [
-      ".git", "node_modules", ".DS_Store", "tmp", "log", ".bundle", "vendor/bundle",
+      ".git", "node_modules", ".DS_Store", "tmp", "log", ".bundle", "vendor",
       "coverage", "build", "dist", ".cache", ".idea", ".vscode", "target", ".gradle",
       ".mvn", "out", ".next", ".nuxt", "bower_components", ".terraform", "__pycache__",
       ".pytest_cache", ".tox", "*.pyc", ".sass-cache", ".parcel-cache"
