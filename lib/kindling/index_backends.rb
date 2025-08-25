@@ -16,27 +16,7 @@ module Kindling
     end
 
     def find_rg
-      return @rg if defined?(@rg)
-
-      # Check standard PATH first
-      @rg = which("rg") || which("ripgrep")
-      return @rg if @rg
-
-      # Check common installation locations including Claude Code's bundled ripgrep
-      common_paths = [
-        "/Users/#{ENV["USER"]}/.claude/local/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/arm64-darwin/rg",
-        "/usr/local/bin/rg",
-        "/opt/homebrew/bin/rg"
-      ]
-
-      common_paths.each do |p|
-        if File.executable?(p) && !File.directory?(p)
-          @rg = p
-          return @rg
-        end
-      end
-
-      @rg = nil
+      @rg ||= which("rg") || which("ripgrep")
     end
 
     def run_fd(root, respect_gitignore: true)
