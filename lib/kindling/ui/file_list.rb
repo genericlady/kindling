@@ -90,7 +90,7 @@ module Kindling
           @overlay.add_overlay(@loader_box)
           @loader_added = true
         end
-        
+
         @empty_state&.hide  # Hide empty state
         @tree_view&.hide    # Hide tree view
         @loader&.start     # Start loader animation
@@ -108,7 +108,7 @@ module Kindling
       # Show empty state (when no folder is open)
       def show_empty_state
         @loader&.stop
-        @loader_box&.hide if @loader_box
+        @loader_box&.hide
         @tree_view&.hide
         @empty_state&.show
       end

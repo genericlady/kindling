@@ -3,7 +3,8 @@ NEVER make git commits without explicit user permission. Always ask 'Would you l
 
 # TESTING
 1. Code Coverage should always be >= 85%
-1. Run and Fix `rake test`
+2. Run and Fix `rake test`
+3. Every new file needs to be accompanied by a test file
 
 # Github Actions
 - use `act` to run and debug actions locally
