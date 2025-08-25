@@ -150,6 +150,11 @@ class IndexerTest < Minitest::Test
   end
 
   def test_skips_large_directories
+    # Skip this test when limits are disabled (default is now 0 = unlimited)
+    if Kindling::Config::MAX_DIR_FILE_COUNT == 0
+      skip "Directory limits are disabled by default (set KINDLING_MAX_DIR_FILES to test)"
+    end
+
     with_temp_dir do |dir|
       # Create a directory with too many files
       large_dir = File.join(dir, "large")

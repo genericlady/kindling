@@ -6,18 +6,22 @@ module Kindling
     extend self
 
     # Performance settings (can be overridden with environment variables)
-    MAX_FILES = ENV.fetch("KINDLING_MAX_FILES", "2000000").to_i  # Default 2M for enterprise repos
+    # File limits - set to 0 for unlimited
+    MAX_FILES = ENV.fetch("KINDLING_MAX_FILES", "0").to_i  # 0 = unlimited (default for enterprise)
+
+    # UI performance limits (these stay to prevent UI lag)
     MAX_VISIBLE_RESULTS = ENV.fetch("KINDLING_MAX_VISIBLE", "5000").to_i
     MAX_PREVIEW_PATHS = ENV.fetch("KINDLING_MAX_PREVIEW", "1000").to_i
     DEBOUNCE_MS = ENV.fetch("KINDLING_DEBOUNCE_MS", "200").to_i
-    PROGRESS_UPDATE_INTERVAL = ENV.fetch("KINDLING_PROGRESS_INTERVAL", "500").to_i
+    PROGRESS_UPDATE_INTERVAL = ENV.fetch("KINDLING_PROGRESS_INTERVAL", "1000").to_i  # Every 1000 files
 
-    # Directory limits - skip directories that exceed these
-    MAX_DIR_SIZE_MB = ENV.fetch("KINDLING_MAX_DIR_SIZE_MB", "500").to_i
-    MAX_DIR_FILE_COUNT = ENV.fetch("KINDLING_MAX_DIR_FILES", "50000").to_i
+    # Directory size checks - set to 0 to disable
+    # These are kept as safety checks but can be disabled
+    MAX_DIR_SIZE_MB = ENV.fetch("KINDLING_MAX_DIR_SIZE_MB", "0").to_i  # 0 = no limit
+    MAX_DIR_FILE_COUNT = ENV.fetch("KINDLING_MAX_DIR_FILES", "0").to_i  # 0 = no limit
 
-    # Memory limits
-    MAX_MEMORY_MB = ENV.fetch("KINDLING_MAX_MEMORY_MB", "1000").to_i
+    # Memory limits - still useful to prevent runaway memory usage
+    MAX_MEMORY_MB = ENV.fetch("KINDLING_MAX_MEMORY_MB", "2000").to_i  # 2GB default
 
     # UI settings
     WINDOW_WIDTH = 1200

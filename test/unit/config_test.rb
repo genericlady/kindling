@@ -18,14 +18,14 @@ class ConfigTest < Minitest::Test
   end
 
   def test_constants_defined
-    assert_equal 2_000_000, Kindling::Config::MAX_FILES
+    assert_equal 0, Kindling::Config::MAX_FILES  # 0 = unlimited
     assert_equal 5_000, Kindling::Config::MAX_VISIBLE_RESULTS
     assert_equal 1_000, Kindling::Config::MAX_PREVIEW_PATHS
     assert_equal 200, Kindling::Config::DEBOUNCE_MS
-    assert_equal 500, Kindling::Config::PROGRESS_UPDATE_INTERVAL
-    assert_equal 500, Kindling::Config::MAX_DIR_SIZE_MB
-    assert_equal 50_000, Kindling::Config::MAX_DIR_FILE_COUNT
-    assert_equal 1000, Kindling::Config::MAX_MEMORY_MB
+    assert_equal 1000, Kindling::Config::PROGRESS_UPDATE_INTERVAL
+    assert_equal 0, Kindling::Config::MAX_DIR_SIZE_MB  # 0 = no limit
+    assert_equal 0, Kindling::Config::MAX_DIR_FILE_COUNT  # 0 = no limit
+    assert_equal 2000, Kindling::Config::MAX_MEMORY_MB
     assert_equal 1200, Kindling::Config::WINDOW_WIDTH
     assert_equal 800, Kindling::Config::WINDOW_HEIGHT
     assert_equal 0.6, Kindling::Config::PANE_POSITION
@@ -101,14 +101,14 @@ class ConfigTest < Minitest::Test
 
   def test_within_memory_limit_when_at_limit
     # Mock memory at limit
-    Kindling::Config.stub :current_memory_mb, 1000 do
+    Kindling::Config.stub :current_memory_mb, 2000 do
       assert Kindling::Config.within_memory_limit?
     end
   end
 
   def test_within_memory_limit_when_above
     # Mock high memory usage
-    Kindling::Config.stub :current_memory_mb, 1100 do
+    Kindling::Config.stub :current_memory_mb, 2100 do
       refute Kindling::Config.within_memory_limit?
     end
   end
@@ -159,7 +159,7 @@ class ConfigTest < Minitest::Test
 
     Kindling::Logging.stub :debug, proc { |msg| debug_messages << msg } do
       Kindling::Logging.stub :warn, proc { |msg| warn_messages << msg } do
-        Kindling::Config.stub :current_memory_mb, 1100 do
+        Kindling::Config.stub :current_memory_mb, 2100 do
           Kindling::Config.log_memory
         end
       end
@@ -167,7 +167,7 @@ class ConfigTest < Minitest::Test
 
     assert_equal 1, debug_messages.size
     assert_equal 1, warn_messages.size
-    assert_match(/Memory usage exceeds limit.*1100.*1000/, warn_messages.first)
+    assert_match(/Memory usage exceeds limit.*2100.*2000/, warn_messages.first)
   end
 
   def test_ps_command_format
