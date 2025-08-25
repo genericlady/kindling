@@ -132,7 +132,7 @@ class FuzzyTest < Minitest::Test
 
     # Warm up (JIT compilation, etc.)
     Kindling::Fuzzy.filter(large_paths, "warmup", limit: 10)
-    
+
     # Measure actual performance
     start = Time.now
     result = Kindling::Fuzzy.filter(large_paths, "dir5sub23", limit: 100)

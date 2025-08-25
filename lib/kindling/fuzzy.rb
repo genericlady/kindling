@@ -73,7 +73,7 @@ module Kindling
     def score_path(path, query_chars, query_lower)
       # Early exit for paths shorter than query
       return 0 if path.length < query_chars.length
-      
+
       path_lower = path.downcase
       basename_lower = File.basename(path).downcase
       basename_start = path.length - basename_lower.length
@@ -97,7 +97,7 @@ module Kindling
           # Start of string/word bonus
           if idx == 0 || (idx > 0 && SEPARATORS.include?(path[idx - 1]))
             score += START_BONUS
-            
+
             # After separator bonus (combined with above check)
             if idx > 0
               score += SEPARATOR_BONUS
