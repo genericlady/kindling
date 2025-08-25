@@ -10,12 +10,16 @@ module Kindling
         @callbacks = {}
         @store = nil
         @tree_view = nil
+        @loader = nil
+        @loader_box = nil
+        @empty_state = nil
+        @overlay = nil
 
         set_policy(:automatic, :automatic)
         set_hexpand(true)
         set_vexpand(true)
 
-        setup_tree_view
+        setup_ui
       end
 
       # Event callbacks
@@ -79,7 +83,95 @@ module Kindling
         @callbacks[:selection_changed]&.call([])
       end
 
+      # Show loading loader
+      def show_loading
+        # Add loader to overlay if not already added
+        if !@loader_added && @loader_box
+          @overlay.add_overlay(@loader_box)
+          @loader_added = true
+        end
+        
+        @empty_state&.hide  # Hide empty state
+        @tree_view&.hide    # Hide tree view
+        @loader&.start     # Start loader animation
+        @loader_box&.show  # Show loader box
+      end
+
+      # Hide loading loader
+      def hide_loading
+        @loader&.stop      # Stop loader animation
+        @loader_box&.hide  # Hide loader box
+        @empty_state&.hide  # Hide empty state (in case it's still showing)
+        @tree_view&.show    # Show tree view with results
+      end
+
+      # Show empty state (when no folder is open)
+      def show_empty_state
+        @loader&.stop
+        @loader_box&.hide if @loader_box
+        @tree_view&.hide
+        @empty_state&.show
+      end
+
       private
+
+      def setup_ui
+        # Create overlay to hold tree view, loader, and empty state
+        @overlay = Gtk::Overlay.new
+        add(@overlay)
+
+        # Setup tree view
+        setup_tree_view
+        @overlay.add(@tree_view)
+        @tree_view.hide # Hidden initially
+
+        # Setup loader (centered)
+        setup_loader
+
+        # Setup empty state (shown by default)
+        setup_empty_state
+      end
+
+      def setup_empty_state
+        # Create a box for the empty state
+        @empty_state = Gtk::Box.new(:vertical, 20)
+        @empty_state.set_valign(:center)
+        @empty_state.set_halign(:center)
+
+        # Add an icon (folder icon)
+        icon = Gtk::Image.new(icon_name: "folder-open", size: :dialog)
+        icon.pixel_size = 64
+        icon.style_context.add_class("dim-label")
+        @empty_state.pack_start(icon, expand: false, fill: false, padding: 0)
+
+        # Add main message
+        title = Gtk::Label.new
+        title.markup = "<big><b>No folder open</b></big>"
+        title.style_context.add_class("dim-label")
+        @empty_state.pack_start(title, expand: false, fill: false, padding: 0)
+
+        @overlay.add_overlay(@empty_state)
+        @empty_state.show # Shown by default
+      end
+
+      def setup_loader
+        # Create a box to center the loader
+        @loader_box = Gtk::Box.new(:vertical, 10)
+        @loader_box.set_valign(:center)
+        @loader_box.set_halign(:center)
+
+        @loader = Gtk::Spinner.new
+        @loader.set_size_request(32, 32)
+        @loader_box.pack_start(@loader, expand: false, fill: false, padding: 0)
+
+        # Add a label below the loader
+        label = Gtk::Label.new("Loading files...")
+        label.style_context.add_class("dim-label")
+        @loader_box.pack_start(label, expand: false, fill: false, padding: 0)
+
+        # Don't add to overlay here - will be added when needed
+        @loader_added = false
+      end
 
       def setup_tree_view
         # Create list store with checkbox state (Boolean) and path (String)
@@ -124,8 +216,7 @@ module Kindling
         path_column = Gtk::TreeViewColumn.new("Path", text_renderer, text: 1)
         @tree_view.append_column(path_column)
 
-        # Add to scrolled window
-        add(@tree_view)
+        # Don't add to scrolled window here - it's added to overlay in setup_ui
       end
     end
   end

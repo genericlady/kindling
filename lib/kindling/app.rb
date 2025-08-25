@@ -16,6 +16,7 @@ module Kindling
       @index_generation = 0
       @include_contents = false
       @current_root = nil
+      @loading_timer_id = nil
     end
 
     def run(argv)
@@ -48,6 +49,7 @@ module Kindling
     def index_folder(root_path)
       # Cancel any existing indexing operation
       @indexer&.cancel!
+      cancel_loading_timer!
       @index_generation += 1
       current_gen = @index_generation
 
@@ -58,9 +60,16 @@ module Kindling
       @window.clear_file_selections
       @selected_paths.clear
 
-      # Show initial progress
-      @window.show_progress_spinner
-      @window.update_progress("Scanning #{File.basename(root_path)}...")
+      # Delay showing loaders to avoid flashing for fast scans
+      @loading_timer_id = GLib::Timeout.add(250) do
+        if current_gen == @index_generation
+          @window.show_file_list_loading
+          @window.show_progress_loader
+          @window.update_progress("Scanning #{File.basename(root_path)}...")
+        end
+        @loading_timer_id = nil
+        false # don't repeat
+      end
 
       # Run indexing in a worker thread
       @indexing_thread = Thread.new do
@@ -86,8 +95,10 @@ module Kindling
           GLib::Idle.add do
             if current_gen == @index_generation
               @paths = paths
+              cancel_loading_timer!
+              @window.hide_file_list_loading
               @window.update_file_list(@paths)
-              @window.hide_progress_spinner
+              @window.hide_progress_loader
               elapsed = (Time.now - start_time).round(1)
               @window.update_progress("#{@paths.size} files • #{File.basename(root_path)} • #{elapsed}s")
               Logging.debug("Indexed #{@paths.size} files from #{root_path} in #{elapsed}s")
@@ -100,7 +111,9 @@ module Kindling
         end
       rescue => e
         GLib::Idle.add do
-          @window.hide_progress_spinner
+          cancel_loading_timer!
+          @window.hide_file_list_loading
+          @window.hide_progress_loader
           @window.update_progress("Indexing failed: #{e.message}")
           Logging.error("Indexing failed: #{e.message}")
           false
@@ -245,6 +258,13 @@ module Kindling
         else
           "" # No language hint
         end
+      end
+    end
+
+    def cancel_loading_timer!
+      if @loading_timer_id
+        GLib::Source.remove(@loading_timer_id)
+        @loading_timer_id = nil
       end
     end
   end

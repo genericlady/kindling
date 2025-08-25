@@ -43,12 +43,12 @@ module Kindling
         @header.update_progress(message)
       end
 
-      def show_progress_spinner
-        @header.show_progress_spinner
+      def show_progress_loader
+        @header.show_progress_loader
       end
 
-      def hide_progress_spinner
-        @header.hide_progress_spinner
+      def hide_progress_loader
+        @header.hide_progress_loader
       end
 
       def update_file_list(paths)
@@ -57,6 +57,14 @@ module Kindling
 
       def clear_file_selections
         @file_list.clear_selection
+      end
+
+      def show_file_list_loading
+        @file_list.show_loading
+      end
+
+      def hide_file_list_loading
+        @file_list.hide_loading
       end
 
       def update_preview(content)

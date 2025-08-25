@@ -9,7 +9,7 @@ module Kindling
 
         @callbacks = {}
         @debounce_timer = nil
-        @spinner = nil
+        @loader = nil
         @progress_label = nil
 
         set_margin_top(5)
@@ -42,14 +42,14 @@ module Kindling
         @progress_label.text = message if @progress_label
       end
 
-      def show_progress_spinner
-        @spinner&.start
-        @spinner&.show
+      def show_progress_loader
+        @loader&.start
+        @loader&.show
       end
 
-      def hide_progress_spinner
-        @spinner&.stop
-        @spinner&.hide
+      def hide_progress_loader
+        @loader&.stop
+        @loader&.hide
       end
 
       def enable_copy_button
@@ -72,10 +72,10 @@ module Kindling
         @folder_button.signal_connect("clicked") { choose_folder }
         pack_start(@folder_button, expand: false, fill: false, padding: 0)
 
-        # Progress spinner (hidden by default)
-        @spinner = Gtk::Spinner.new
-        @spinner.hide
-        pack_start(@spinner, expand: false, fill: false, padding: 0)
+        # Progress loader (hidden by default)
+        @loader = Gtk::Spinner.new
+        @loader.hide
+        pack_start(@loader, expand: false, fill: false, padding: 0)
 
         # Progress label
         @progress_label = Gtk::Label.new("")
