@@ -1,196 +1,149 @@
 # frozen_string_literal: true
 
-require "find"
 require "pathname"
+require_relative "gitignore_parser"
+require_relative "index_cache"
+require_relative "index_backends"
+require_relative "dir_walker"
+require_relative "cancellation_token"
 
 module Kindling
-  # Recursive file indexer with cancellation support and ignore rules
   class Indexer
-    # Default patterns to ignore (basic hardcoded patterns)
     DEFAULT_IGNORES = [
-      ".git",
-      "node_modules",
-      ".DS_Store",
-      "tmp",
-      "log",
-      ".bundle",
-      "vendor/bundle",
-      "coverage",
-      "build",
-      "dist",
-      ".cache",
-      ".idea",           # IntelliJ
-      ".vscode",         # VS Code
-      "target",          # Maven/Gradle
-      ".gradle",         # Gradle
-      ".mvn",            # Maven
-      "out",             # Build output
-      ".next",           # Next.js
-      ".nuxt",           # Nuxt.js
-      "bower_components", # Bower
-      ".terraform",      # Terraform
-      "__pycache__",     # Python
-      ".pytest_cache",   # Python pytest
-      ".tox",            # Python tox
-      "*.pyc",           # Python compiled
-      ".sass-cache",     # Sass
-      ".parcel-cache"    # Parcel
+      ".git", "node_modules", ".DS_Store", "tmp", "log", ".bundle", "vendor/bundle",
+      "coverage", "build", "dist", ".cache", ".idea", ".vscode", "target", ".gradle",
+      ".mvn", "out", ".next", ".nuxt", "bower_components", ".terraform", "__pycache__",
+      ".pytest_cache", ".tox", "*.pyc", ".sass-cache", ".parcel-cache"
     ].freeze
 
     def initialize(ignores: DEFAULT_IGNORES, use_gitignore: true)
       @ignores = ignores
       @use_gitignore = use_gitignore
-      @cancel = false
-      @paths = []
-      @gitignore_parser = nil
+      @cancel = CancellationToken.new
     end
 
-    # Index all files under root path
-    # @param root [String] Root directory to index
-    # @param on_progress [Proc] Called periodically with file count
-    # @yield [Array<String>] Called on completion with all relative paths
-    def index(root, on_progress: nil)
-      @cancel = false
-      @paths = []
-      @root = Pathname.new(root)
-      count = 0
-      skipped_dirs = 0
-      start_time = Time.now
+    # Streams batches via yield, returns full array at end.
+    def index(root, on_progress: nil, batch_size: Config::BATCH_SIZE)
+      start = Time.now
+      root = File.expand_path(root)
+      Logging.info("Index start #{root}")
 
-      Logging.info("Starting indexing of #{root}")
-      limit_msg = (Config::MAX_FILES > 0) ? "#{Config::MAX_FILES} files" : "unlimited"
-      dir_limit_msg = (Config::MAX_DIR_FILE_COUNT > 0) ? Config::MAX_DIR_FILE_COUNT.to_s : "unlimited"
-      Logging.info("Limits: #{limit_msg}, Max dir files: #{dir_limit_msg}")
-
-      # Load .gitignore if it exists and we're using it
+      gitignore = nil
       if @use_gitignore
-        @gitignore_parser = GitignoreParser.new
-        gitignore_path = File.join(root, ".gitignore")
-        @gitignore_parser.load_file(gitignore_path) if File.exist?(gitignore_path)
+        gi = File.join(root, ".gitignore")
+        gitignore = GitignoreParser.new
+        gitignore.load_file(gi) if File.exist?(gi)
       end
 
-      Find.find(root) do |path|
-        # Check cancellation every iteration
-        if @cancel
-          Logging.info("Indexing cancelled after #{count} files")
-          Find.prune
-          break
-        end
+      all = []
+      count = 0
 
-        # Stop if we hit the max file limit (only if limit is set)
+      # 1) Try Rust backends (fd > rg) if enabled
+      backend = select_backend
+      if backend
+        each_rel = (backend == :fd) ? IndexBackends.run_fd(root, respect_gitignore: @use_gitignore) : IndexBackends.run_rg(root, respect_gitignore: @use_gitignore)
+        if each_rel
+          batch = []
+          each_rel.each do |rel|
+            break if @cancel.cancelled?
+            all << rel
+            batch << rel
+            count += 1
+            if Config::MAX_FILES > 0 && count >= Config::MAX_FILES
+              Logging.warn("Hit MAX_FILES=#{Config::MAX_FILES}")
+              break
+            end
+            if batch.size >= batch_size
+              on_progress&.call(count)
+              yield batch if block_given?
+              batch.clear
+            end
+          end
+          unless batch.empty?
+            on_progress&.call(count)
+            yield batch if block_given?
+          end
+          finalize_cache(root, all)
+          Logging.info("Index done via #{backend} in #{(Time.now - start).round(2)}s (#{count} files)")
+          return all
+        end
+      end
+
+      # 2) Fallback to internal walker with backpressure
+      Logging.info("Using Ruby walker (backend: #{backend || "none available"})")
+      walker = DirWalker.new(
+        root: root,
+        ignores: @ignores,
+        gitignore_parser: gitignore,
+        max_dir_entries: Config::MAX_DIR_FILE_COUNT,
+        max_dir_sample_mb: Config::MAX_DIR_SIZE_MB,
+        cancel_token: @cancel,
+        queue_size: Config::WALK_QUEUE_SIZE
+      ).start!
+
+      batch = []
+      while (rel = walker.queue.pop)
+        break if @cancel.cancelled?
+        all << rel
+        batch << rel
+        count += 1
         if Config::MAX_FILES > 0 && count >= Config::MAX_FILES
-          Logging.warn("Hit maximum file limit (#{Config::MAX_FILES}), stopping indexing")
+          Logging.warn("Hit MAX_FILES=#{Config::MAX_FILES}")
+          @cancel.cancel! # Stop the walker
           break
         end
-
-        pathname = Pathname.new(path)
-        basename = pathname.basename.to_s
-
-        # Get relative path for gitignore checking
-        begin
-          relative = pathname.relative_path_from(@root).to_s
-        rescue => e
-          Logging.debug("Skipped unreadable path: #{path} - #{e.message}")
-          next
-        end
-
-        # Skip ignored patterns (hardcoded)
-        if should_ignore?(basename)
-          if pathname.directory?
-            skipped_dirs += 1
-            Logging.debug("Skipping ignored directory: #{basename}")
-          end
-          Find.prune if pathname.directory?
-          next
-        end
-
-        # Check gitignore patterns
-        if @gitignore_parser&.ignored?(relative, is_directory: pathname.directory?)
-          Find.prune if pathname.directory?
-          next
-        end
-
-        # Check directory size limits
-        if pathname.directory? && should_skip_large_directory?(pathname)
-          skipped_dirs += 1
-          Logging.info("Skipping large directory: #{relative}")
-          Find.prune
-          next
-        end
-
-        # Only track files, not directories
-        if pathname.file?
-          @paths << relative
-          count += 1
-
-          # Report progress with better intervals for large repos
-          if count % Config::PROGRESS_UPDATE_INTERVAL == 0 && on_progress
-            elapsed = Time.now - start_time
-            rate = (count / elapsed).round(0)
-            Logging.debug("Indexed #{count} files (#{rate} files/sec)")
-            on_progress.call(count)
-          end
+        if batch.size >= batch_size
+          on_progress&.call(count)
+          yield batch if block_given?
+          batch.clear
         end
       end
 
-      # Final statistics
-      elapsed = Time.now - start_time
-      Logging.info("Indexing complete: #{count} files found in #{elapsed.round(1)}s")
-      Logging.info("Skipped #{skipped_dirs} directories") if skipped_dirs > 0
+      walker.join # Wait for walker thread to finish
 
-      # Final progress update
       on_progress&.call(count)
+      yield batch if block_given? && !batch.empty?
 
-      # Return paths on completion
-      yield @paths if block_given?
-      @paths
+      finalize_cache(root, all)
+      Logging.info("Index done via ruby walker in #{(Time.now - start).round(2)}s (#{count} files)")
+      all
     end
 
-    # Cancel ongoing indexing operation
     def cancel!
-      @cancel = true
+      @cancel.cancel!
     end
 
     private
 
-    def should_ignore?(name)
-      @ignores.any? { |pattern| name == pattern || name.start_with?(".#{pattern}") }
+    def select_backend
+      case Config::INDEX_BACKEND
+      when :fd then IndexBackends.find_fd ? :fd : nil
+      when :rg then IndexBackends.find_rg ? :rg : nil
+      when :none then nil
+      else
+        # :auto - prefer fd, fall back to rg
+        if IndexBackends.find_fd
+          :fd
+        else
+          (IndexBackends.find_rg ? :rg : nil)
+        end
+      end
     end
 
-    # Check if a directory should be skipped due to size limits
-    def should_skip_large_directory?(dir_path)
-      # Skip check entirely if limits are disabled (0 = no limit)
-      return false if Config::MAX_DIR_FILE_COUNT == 0 && Config::MAX_DIR_SIZE_MB == 0
-
-      # Quick heuristic: check file count first (faster)
-      file_count = 0
-      total_size = 0
-
-      begin
-        Dir.foreach(dir_path) do |entry|
-          next if entry == "." || entry == ".."
-
-          file_count += 1
-          # Stop counting if we exceed the limit (only if limit is set)
-          if Config::MAX_DIR_FILE_COUNT > 0 && file_count > Config::MAX_DIR_FILE_COUNT
-            return true
-          end
-
-          # Check size for a sample of files (checking all would be slow)
-          if Config::MAX_DIR_SIZE_MB > 0 && file_count <= 100
-            entry_path = File.join(dir_path, entry)
-            if File.file?(entry_path)
-              total_size += File.size(entry_path)
-              # Convert to MB and check
-              return true if total_size > Config::MAX_DIR_SIZE_MB * 1_048_576
-            end
-          end
+    def finalize_cache(root, files)
+      # Cheap snapshot now; mtimes can be filled lazily as needed
+      mtimes = {}
+      files.first(5_000).each do |rel| # Cap stats cost
+        fp = File.join(root, rel)
+        begin
+          mtimes[rel] = File.mtime(fp).to_i if File.file?(fp)
+        rescue
+          # Ignore stat errors
         end
-      rescue => e
-        Logging.debug("Error checking directory size for #{dir_path}: #{e.message}")
       end
-
-      false
+      IndexCache.new(root).save(files: files, mtimes: mtimes)
+    rescue => e
+      Logging.debug("Failed to save index cache: #{e.message}")
     end
   end
 end

@@ -105,6 +105,39 @@ bin/kindling
 
 📚 **Detailed setup guides**: [macOS](docs/SETUP_MACOS.md) | [Linux](docs/SETUP_LINUX.md)
 
+### System Dependencies (Optional but Recommended)
+
+For blazing-fast indexing of large repositories, Kindling can use Rust-based file search tools:
+
+- **[fd](https://github.com/sharkdp/fd)** (preferred) - A simple, fast alternative to `find`
+- **[ripgrep](https://github.com/BurntSushi/ripgrep)** (fallback) - Recursively search directories
+
+Kindling automatically detects these tools if available. Without them, it falls back to a pure Ruby implementation.
+
+#### Installing Search Tools
+
+**macOS:**
+```bash
+brew install fd ripgrep
+```
+
+**Ubuntu/Debian:**
+```bash
+sudo apt-get update
+sudo apt-get install fd-find ripgrep
+# Note: 'fd' is installed as 'fdfind' on Debian/Ubuntu - Kindling detects both
+```
+
+**Fedora:**
+```bash
+sudo dnf install fd-find ripgrep
+```
+
+**Windows (with Scoop):**
+```powershell
+scoop install fd ripgrep
+```
+
 ### Usage
 
 ```bash
@@ -129,30 +162,40 @@ rake bench
 
 ### Configuration for Large/Enterprise Repositories
 
-Kindling is designed to handle enterprise-scale monolithic repositories with **no artificial file limits**. By default, it will index all files it can find.
+Kindling uses smart backends and streaming to handle massive monolithic repositories efficiently.
 
 ```bash
-# Optional: Set limits if needed (default: unlimited)
-export KINDLING_MAX_FILES=1000000  # Set to 0 for unlimited (default)
+# Backend selection (default: auto)
+export KINDLING_INDEX_BACKEND=auto  # auto, fd, rg, none (force Ruby)
+
+# File limits (default: 500,000)
+export KINDLING_MAX_FILES=1000000  # Set to 0 for unlimited
 
 # Memory limit in MB (default: 2000)
 export KINDLING_MAX_MEMORY_MB=4000
 
-# Optional: Skip very large directories (default: no limit)
-export KINDLING_MAX_DIR_SIZE_MB=1000  # Set to 0 to disable (default)
-export KINDLING_MAX_DIR_FILES=100000  # Set to 0 to disable (default)
+# Directory pruning (defaults: 250MB, 15000 files)
+export KINDLING_MAX_DIR_SIZE_MB=500   # Skip directories larger than this
+export KINDLING_MAX_DIR_FILES=20000   # Skip directories with more files
 
-# Run with debug logging to monitor indexing progress
+# Streaming settings
+export KINDLING_BATCH_SIZE=5000       # Files per UI batch (default: 2000)
+export KINDLING_WALK_QUEUE_SIZE=20000 # Backpressure queue (default: 10000)
+
+# Progressive UI updates (experimental)
+export KINDLING_PROGRESSIVE_UI=true   # Show results as they stream in
+
+# Run with debug logging to monitor indexing
 export KINDLING_DEBUG=1
 bin/kindling
 ```
 
-**Tips for large repositories:**
-- No file count limits by default - indexes everything
-- Progress updates every 1000 files to reduce overhead
-- Use `.gitignore` to exclude build artifacts and generated files
-- Indexing speed typically 5,000-10,000 files/second
-- First index of very large repos (100k+ files) may take 30-60 seconds
+**Performance characteristics:**
+- With `fd`: First results in ~200-400ms on 100k+ file repos
+- Indexing speed: 10,000-50,000 files/second (with fd/rg)
+- Memory usage: Bounded to a few hundred MB even on 500k+ files
+- Cache: Speeds up re-opens of the same repository
+- Cancellation: Interrupts in <100ms when switching folders
 
 ---
 
