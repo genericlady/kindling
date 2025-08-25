@@ -54,17 +54,13 @@ my-project/
 └── Gemfile
 
 ## app/models/user.rb
-
-```ruby
 class User < ApplicationRecord
   validates :email, presence: true, uniqueness: true
   has_many :posts
 end
-```
 
 ## Gemfile
 
-```ruby
 source "https://rubygems.org"
 gem "rails", "~> 7.0"
 ```
