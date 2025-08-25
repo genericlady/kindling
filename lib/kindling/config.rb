@@ -5,19 +5,19 @@ module Kindling
   module Config
     extend self
 
-    # Performance settings
-    MAX_FILES = 250_000
-    MAX_VISIBLE_RESULTS = 5_000
-    MAX_PREVIEW_PATHS = 1_000
-    DEBOUNCE_MS = 200
-    PROGRESS_UPDATE_INTERVAL = 200 # files
+    # Performance settings (can be overridden with environment variables)
+    MAX_FILES = ENV.fetch("KINDLING_MAX_FILES", "2000000").to_i  # Default 2M for enterprise repos
+    MAX_VISIBLE_RESULTS = ENV.fetch("KINDLING_MAX_VISIBLE", "5000").to_i
+    MAX_PREVIEW_PATHS = ENV.fetch("KINDLING_MAX_PREVIEW", "1000").to_i
+    DEBOUNCE_MS = ENV.fetch("KINDLING_DEBOUNCE_MS", "200").to_i
+    PROGRESS_UPDATE_INTERVAL = ENV.fetch("KINDLING_PROGRESS_INTERVAL", "500").to_i
 
     # Directory limits - skip directories that exceed these
-    MAX_DIR_SIZE_MB = 100 # Skip directories larger than this
-    MAX_DIR_FILE_COUNT = 10_000 # Skip directories with more files than this
+    MAX_DIR_SIZE_MB = ENV.fetch("KINDLING_MAX_DIR_SIZE_MB", "500").to_i
+    MAX_DIR_FILE_COUNT = ENV.fetch("KINDLING_MAX_DIR_FILES", "50000").to_i
 
     # Memory limits
-    MAX_MEMORY_MB = 250
+    MAX_MEMORY_MB = ENV.fetch("KINDLING_MAX_MEMORY_MB", "1000").to_i
 
     # UI settings
     WINDOW_WIDTH = 1200

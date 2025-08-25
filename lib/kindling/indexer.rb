@@ -18,7 +18,23 @@ module Kindling
       "coverage",
       "build",
       "dist",
-      ".cache"
+      ".cache",
+      ".idea",           # IntelliJ
+      ".vscode",         # VS Code
+      "target",          # Maven/Gradle
+      ".gradle",         # Gradle
+      ".mvn",            # Maven
+      "out",             # Build output
+      ".next",           # Next.js
+      ".nuxt",           # Nuxt.js
+      "bower_components", # Bower
+      ".terraform",      # Terraform
+      "__pycache__",     # Python
+      ".pytest_cache",   # Python pytest
+      ".tox",            # Python tox
+      "*.pyc",           # Python compiled
+      ".sass-cache",     # Sass
+      ".parcel-cache"    # Parcel
     ].freeze
 
     def initialize(ignores: DEFAULT_IGNORES, use_gitignore: true)
@@ -38,6 +54,11 @@ module Kindling
       @paths = []
       @root = Pathname.new(root)
       count = 0
+      skipped_dirs = 0
+      start_time = Time.now
+
+      Logging.info("Starting indexing of #{root}")
+      Logging.info("Max files: #{Config::MAX_FILES}, Max dir size: #{Config::MAX_DIR_SIZE_MB}MB, Max dir files: #{Config::MAX_DIR_FILE_COUNT}")
 
       # Load .gitignore if it exists and we're using it
       if @use_gitignore
@@ -49,7 +70,14 @@ module Kindling
       Find.find(root) do |path|
         # Check cancellation every iteration
         if @cancel
+          Logging.info("Indexing cancelled after #{count} files")
           Find.prune
+          break
+        end
+
+        # Stop if we hit the max file limit
+        if count >= Config::MAX_FILES
+          Logging.warn("Hit maximum file limit (#{Config::MAX_FILES}), stopping indexing")
           break
         end
 
@@ -66,6 +94,10 @@ module Kindling
 
         # Skip ignored patterns (hardcoded)
         if should_ignore?(basename)
+          if pathname.directory?
+            skipped_dirs += 1
+            Logging.debug("Skipping ignored directory: #{basename}")
+          end
           Find.prune if pathname.directory?
           next
         end
@@ -78,7 +110,8 @@ module Kindling
 
         # Check directory size limits
         if pathname.directory? && should_skip_large_directory?(pathname)
-          Logging.debug("Skipping large directory: #{relative}")
+          skipped_dirs += 1
+          Logging.info("Skipping large directory: #{relative}")
           Find.prune
           next
         end
@@ -88,12 +121,20 @@ module Kindling
           @paths << relative
           count += 1
 
-          # Report progress every 200 files
+          # Report progress with better intervals for large repos
           if count % Config::PROGRESS_UPDATE_INTERVAL == 0 && on_progress
+            elapsed = Time.now - start_time
+            rate = (count / elapsed).round(0)
+            Logging.debug("Indexed #{count} files (#{rate} files/sec)")
             on_progress.call(count)
           end
         end
       end
+
+      # Final statistics
+      elapsed = Time.now - start_time
+      Logging.info("Indexing complete: #{count} files found in #{elapsed.round(1)}s")
+      Logging.info("Skipped #{skipped_dirs} directories") if skipped_dirs > 0
 
       # Final progress update
       on_progress&.call(count)
